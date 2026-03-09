@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-MAIA_HTTPD_VERSION = sweep
-MAIA_HTTPD_SITE = https://github.com/F5OEO/maia-sdr.git
+MAIA_HTTPD_VERSION = fishball-dev
+MAIA_HTTPD_SITE = https://github.com/andylee77/maia-sdr.git
 MAIA_HTTPD_SITE_METHOD = git
 MAIA_HTTPD_DEPENDENCIES = host-openssl
 MAIA_HTTPD_CONF_OPTS += -DWITH_SSL=system

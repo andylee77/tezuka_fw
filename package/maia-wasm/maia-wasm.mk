@@ -5,8 +5,8 @@
 ################################################################################
 
 
-MAIA_WASM_VERSION = main
-MAIA_WASM_SITE = https://github.com/F5OEO/maia-sdr.git
+MAIA_WASM_VERSION = fishball-dev
+MAIA_WASM_SITE = https://github.com/andylee77/maia-sdr.git
 MAIA_WASM_SITE_METHOD = git
 MAIA_WASM_DEPENDENCIES = rust-wasm wasm-pack 
 define MAIA_WASM_BUILD_CMDS
