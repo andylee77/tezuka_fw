@@ -105,7 +105,7 @@ if "%INTERACTIVE%"=="true" (
     echo   Source: %DOCKER_SRC%
     echo.
 
-    docker run -it --rm ^
+    docker run -i --rm ^
         --user 0:0 ^
         -v "%PROJECT_DIR%:%DOCKER_SRC%" ^
         -v %DOCKER_VOLUME%:/home/br-user/tezuka_build ^
