@@ -61,12 +61,12 @@ log "  ✓ Source synced"
 
 # ── Step 2: Fix Windows CRLF line endings ─────────────────────────────────────
 log "Step 2: Fixing CRLF line endings..."
-find "$BUILD_HOME" -maxdepth 4 \
-    \( -name '*.in' -o -name '*.mk' -o -name '*.sh' -o -name '*.cfg' \
-       -o -name '*.config' -o -name 'Config.*' -o -name '*defconfig*' \
-       -o -name 'external.desc' -o -name 'external.mk' -o -name 'sourceme.*' \
-       -o -name 'S[0-9][0-9]*' -o -name 'Makefile' -o -name '*.c' -o -name '*.h' \
-       -o -name '*.dts' -o -name '*.dtsi' \) \
+# Strip CRLF from all text files in our source tree (excludes buildroot/ cache
+# and binary files). No maxdepth limit — overlay files are 6-7 levels deep.
+find "$BUILD_HOME" -not -path '*/buildroot/*' -not -path '*/.git/*' -type f \
+    -not -name '*.elf' -not -name '*.bit' -not -name '*.xsa' -not -name '*.bin' \
+    -not -name '*.gz' -not -name '*.zip' -not -name '*.pdf' -not -name '*.png' \
+    -not -name '*.jpg' -not -name '*.ico' -not -name '*.lz4' \
     -exec sed -i 's/\r$//' {} +
 log "  ✓ CRLF→LF conversion complete"
 

@@ -83,6 +83,38 @@ ssh root@192.168.120.50 'cat /sys/firmware/devicetree/base/model'
 
 ---
 
+## [2026-03-09] Change 002 — Fix Z7020 Boot Failure (CRLF + Board Path)
+
+**Doc:** `doc/changes/002_fix_7020_boot_fsbl_mismatch.md`
+
+### Problem
+Board drops to `FISHBALL>` U-Boot prompt on boot instead of booting Linux.
+
+**Root cause: CRLF line endings.** Every text file has CRLF (Git `core.autocrlf`
+on Windows). The original `build.sh` CRLF fix was too narrow (`-maxdepth 4`,
+limited file patterns) and missed `common/uboot-env.txt` (209 CRLF lines).
+This file becomes `uEnv.txt` on the SD card and uses `\` line continuation —
+CRLF breaks the continuation, garbling the `sdboot` and other boot variables.
+Upstream builds on Linux (LF natively) so this never surfaced before.
+
+The `POST_IMAGE_SCRIPT_ARGS` pointing to `fishball7010` was actually **by upstream
+design** — both boards share the same PS config. Changed to `fishball7020` for
+correctness, but this was not the boot failure cause.
+
+### Fix
+- **Rewrote CRLF conversion** in `build.sh`: removed `-maxdepth 4`, switched to
+  excluding binary files instead of whitelisting text patterns — covers all overlay
+  files, inittab, `*.txt`, `*.its`, init scripts at any depth
+- Changed `BR2_ROOTFS_POST_IMAGE_SCRIPT_ARGS` from `fishball7010` → `fishball7020`
+- Created `board/tezuka/fishball7020/plutomaia.its` (required by post-image.sh)
+
+### Status
+- [x] Build 002 — Linux boots, login prompt reached
+- [x] Rebuild with full CRLF fix (inittab/init scripts)
+- [x] Verified clean boot — no Bad inittab, no mount errors, no FISHBALL> drop
+
+---
+
 ## Pending / Future
 
 - [ ] Flash and verify model string on hardware
