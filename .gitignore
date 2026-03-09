@@ -6,3 +6,4 @@ f_uac2.c
 u_uac2.h
 *.swp
 output_images/
+.clinerules
