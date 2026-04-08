@@ -34,12 +34,19 @@ See [CHANGELOG.md](CHANGELOG.md) for the full history and
 ### Build
 
 ```bat
-build.bat                   # Full build (~3 min incremental, 1-3 hrs from scratch)
+build.bat                   # Maia SDR build (~3 min incremental, 1-3 hrs clean)
+build.bat --p25             # P25 trunking radio build
 build.bat --interactive     # Open a shell inside the Docker build environment
 build.bat --clean           # Delete build cache and start fresh
+build.bat --p25 --clean     # P25 clean build
 ```
 
 Build output lands in `output_images/`.
+
+**Note:** When switching between Maia and P25 configs, use `--clean` to avoid
+stale build artifacts. The P25 build mounts the
+[fishball-p25](https://github.com/andylee77/fishball-p25) repo at
+`/mnt/fishball-p25` for local source access.
 
 ### Flash to SD card
 
