@@ -1,10 +1,10 @@
 /*
  * Fishball P25 Trunking Radio (Z7020/AD9361)
  *
- * Based on fishball.dtsi (Maia SDR variant).
- * Replaces Maia SDR FPGA nodes with P25-specific:
- * - p25-core UIO device (register access)
- * - p25-dibit / p25-traffic DMA ring buffers
+ * Based on fishball.dtsi. Changes from Maia SDR variant:
+ * - UIO device renamed from maia-sdr to p25-core
+ * - Spectrometer/recording replaced with P25 dibit/traffic DMA buffers
+ * - IIO DMA (rx_dma, tx_dma) and AD9361 IIO support kept intact
  *
  * Copyright (C) 2016 Analog Devices Inc.
  * Copyright (C) 2026 Andy Lee
@@ -71,7 +71,7 @@
 		};
 	};
 
-	/* DMA buffer devices — uses maia-kmod rxbuffer driver for cache coherency */
+	/* P25 DMA buffer devices — uses maia-kmod rxbuffer driver */
 	p25-dibit {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_dibit_dma>;
