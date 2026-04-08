@@ -66,6 +66,12 @@ echo [OK] Docker image: %DOCKER_IMAGE%
 REM ── Parse arguments ─────────────────────────────────────────────────────────
 set "MODE=build"
 set "INTERACTIVE=false"
+set "DEFCONFIG=fishball_maiasdr_7020_defconfig"
+
+REM Check for --p25 flag (can combine: build.bat --p25, build.bat --p25 --clean)
+for %%A in (%*) do (
+    if "%%A"=="--p25" set "DEFCONFIG=fishball_p25_7020_defconfig"
+)
 
 if "%~1"=="--clean" (
     echo.
@@ -95,6 +101,7 @@ if "%INTERACTIVE%"=="true" (
         -v "%PROJECT_DIR%:%DOCKER_SRC%" ^
         -v %DOCKER_VOLUME%:/home/br-user/tezuka_build ^
         -e "SRC_MOUNT=%DOCKER_SRC%" ^
+        -e "DEFCONFIG=%DEFCONFIG%" ^
         -w /home/br-user/tezuka_build ^
         %DOCKER_IMAGE% ^
         /bin/bash
@@ -105,11 +112,15 @@ if "%INTERACTIVE%"=="true" (
     echo   Source: %DOCKER_SRC%
     echo.
 
+    echo   Config: %DEFCONFIG%
+    echo.
+
     docker run -i --rm ^
         --user 0:0 ^
         -v "%PROJECT_DIR%:%DOCKER_SRC%" ^
         -v %DOCKER_VOLUME%:/home/br-user/tezuka_build ^
         -e "SRC_MOUNT=%DOCKER_SRC%" ^
+        -e "DEFCONFIG=%DEFCONFIG%" ^
         -w /home/br-user/tezuka_build ^
         %DOCKER_IMAGE% ^
         /bin/bash "%DOCKER_SRC%/build.sh"

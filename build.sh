@@ -17,7 +17,7 @@ set -euo pipefail
 # ── Configuration ─────────────────────────────────────────────────────────────
 BUILD_HOME="/home/br-user/tezuka_build"
 SRC_MOUNT="${SRC_MOUNT:-/mnt/src}"
-DEFCONFIG="fishball_maiasdr_7020_defconfig"
+DEFCONFIG="${DEFCONFIG:-fishball_maiasdr_7020_defconfig}"
 
 # Colors
 GREEN='\033[0;32m'
