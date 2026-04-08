@@ -1,0 +1,7 @@
+config BR2_PACKAGE_P25_HTTPD
+	bool "p25_httpd"
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_RUSTC
+	help
+	  Fishball P25 trunking radio PS application.
+	  Web dashboard, P25 control channel decoder, AD9361 IIO control.

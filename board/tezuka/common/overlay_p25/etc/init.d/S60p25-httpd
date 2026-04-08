@@ -1,0 +1,35 @@
+#!/bin/sh
+
+case "$1" in
+  start)
+	echo -n "Starting p25-httpd: "
+        if [ -f /usr/bin/p25-httpd.xz ]; then
+            xz -d /usr/bin/p25-httpd.xz
+            chmod +x /usr/bin/p25-httpd
+        fi
+        cd /root
+        start-stop-daemon -S -b -q -m -p /var/run/p25-httpd.pid \
+            -x /usr/bin/p25-httpd -- \
+            --listen 0.0.0.0:8080 \
+            --rx-lo 858100000 \
+            --sample-rate 8000000 \
+            --control-freq 860962500
+        cd - > /dev/null
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	;;
+  stop)
+        echo -n "Stopping p25-httpd: "
+        start-stop-daemon -K -q -p /var/run/p25-httpd.pid 2>/dev/null
+        [ $? = 0 ] && echo "OK" || echo "FAIL"
+	;;
+  restart|reload)
+        $0 stop
+        sleep 1
+        $0 start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

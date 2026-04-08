@@ -18,6 +18,8 @@ Built on [Buildroot](https://buildroot.org/) with
   (upstream assumes Linux-native LF)
 - **Maia SDR packages** pointed at [`andylee77/maia-sdr`](https://github.com/andylee77/maia-sdr)
   fork (`fishball-dev` branch)
+- **Fishball P25 config** — separate defconfig and packages for the
+  [fishball-p25](https://github.com/andylee77/fishball-p25) P25 trunking radio project
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history and
 [doc/changes/](doc/changes/) for detailed write-ups of each change.
@@ -62,7 +64,12 @@ cd tezuka_fw
 ./getbuildroot.sh
 source sourceme.first
 cd buildroot
+
+# Maia SDR build (spectrum analyzer):
 make fishball_maiasdr_7020_defconfig && make
+
+# P25 trunking radio build:
+make fishball_p25_7020_defconfig && make
 ```
 
 See upstream [Buildroot requirements](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory)
@@ -75,10 +82,14 @@ sudo apt install pkg-config libssl-dev libclang-dev
 ## Repository layout
 
 ```text
-board/tezuka/fishball7020/   Z7020-specific DTS and U-Boot files (this fork)
+board/tezuka/fishball7020/   Z7020-specific DTS, U-Boot, bitstreams
 board/tezuka/common/         Shared overlays and post-build scripts
-configs/                     Buildroot defconfigs
-package/                     External Buildroot packages (maia-httpd, maia-wasm, etc.)
+configs/                     Buildroot defconfigs (Maia + P25)
+package/                     External Buildroot packages
+  fishball_fpga_7020/        Maia SDR bitstream
+  fishball_fpga_p25/         P25 trunking radio bitstream
+  maia-httpd/                Maia SDR HTTP daemon
+  p25-httpd/                 P25 trunking radio daemon
 doc/changes/                 Detailed change documentation
 output_images/               Build output (gitignored)
 ```
@@ -92,10 +103,11 @@ output_images/               Build output (gitignored)
 
 ## Related repositories
 
-| Repo                                                          | Purpose                             |
-|---------------------------------------------------------------|-------------------------------------|
-| [andylee77/maia-sdr](https://github.com/andylee77/maia-sdr)  | Maia SDR fork (httpd + wasm + FPGA) |
-| [F5OEO/tezuka_fw](https://github.com/F5OEO/tezuka_fw)        | Upstream firmware project           |
+| Repo                                                                | Purpose                             |
+|---------------------------------------------------------------------|-------------------------------------|
+| [andylee77/maia-sdr](https://github.com/andylee77/maia-sdr)        | Maia SDR fork (httpd + wasm + FPGA) |
+| [andylee77/fishball-p25](https://github.com/andylee77/fishball-p25) | P25 trunking radio (FPGA + Rust)    |
+| [F5OEO/tezuka_fw](https://github.com/F5OEO/tezuka_fw)              | Upstream firmware project           |
 
 ## Credits
 

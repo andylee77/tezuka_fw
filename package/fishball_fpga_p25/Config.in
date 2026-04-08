@@ -1,0 +1,5 @@
+config BR2_PACKAGE_FISHBALL_FPGA_P25
+	bool "fishball_fpga_p25"
+	help
+	  Fishball P25 trunking radio FPGA bitstream for Z7020.
+	  Replaces Maia SDR with P25 DSP (C4FM demod, symbol timing, dibit DMA).
