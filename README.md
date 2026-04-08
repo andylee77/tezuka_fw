@@ -1,125 +1,106 @@
-![tezuka banner](/doc/tezuka.png)
+# tezuka_fw — Fishball Z7020 Fork
 
-[![Tezuka](https://github.com/F5OEO/tezuka_fw/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/F5OEO/F5OEO/tezuka_fw/actions/workflows/main.yml)
-[![GitHub Release](https://img.shields.io/github/release/F5OEO/tezuka_fw.svg)](https://github.com/F5OEO/tezuka_fw/releases/latest)  [![Github Releases](https://img.shields.io/github/downloads/F5OEO/tezuka_fw/total.svg)](https://github.com/F5OEO/tezuka_fw/releases/latest)
-# About tezuka_fw 
-**tezuka** (name referenced to [pluto](https://en.wikipedia.org/wiki/Pluto:_Urasawa_x_Tezuka)) aims to be Universal Zynq/AD9363 firmware builder for plutosdr board and other boards:
-- PlutoSDR
-- Pluto+
-- AntSDR (e200)
-- LibreSDR/ZynqSDR
-- Fishball (Hamgeek or OpenSDRLab SDR Zynq7010/20 + AD9363),PlutoSky
-- SignalSDRPro
+[![Upstream](https://img.shields.io/badge/upstream-F5OEO%2Ftezuka__fw-blue)](https://github.com/F5OEO/tezuka_fw)
 
-Target of **tezuka** firmware is to **maximize features** of the board and integrate interesting projects on multi-target boards.
+Fork of [F5OEO/tezuka_fw](https://github.com/F5OEO/tezuka_fw) targeting the
+**OpenSDRLab Fishball Z7020** (Zynq-7020 SoC + AD9361 RF transceiver).
 
-# New features
-- Frequencies extension : **47.5Mhz**-6Ghz
-- Switch **RX1/RX2 , TX1/TX2** seamlessly
-- Complex **8bit mode** to extend streaming bandwidth with host (**14Mhz** stable bandwidth through usb, **45MHz** through GbE network)
-- Audio gadget to be recognized as a soundcard (**virtual cable** not needed anymore)
-- **SD boot support : easy update, no risk of flashing, high amount of memory**
-- Include **Maia-sdr** transparently
-- Fast sweep
-- Gpios handling (OpenSDRLab Pluto Sky)
-- Publish basic information about the current state on local mqtt server
-- Many other (need to be documented)
+Built on [Buildroot](https://buildroot.org/) with
+[Maia SDR](https://maia-sdr.org/) for spectrum analysis.
 
-# Why not Analog Device or firmware ?
-ADI launch PlutoSDR as a learning platform and it is ! But since 2 years, updates are mainly focused on expensive phaser (around 2500 Euros) product https://wiki.analog.com/resources/eval/user-guides/circuits-from-the-lab/cn0566
+## What this fork adds
 
-Thus, official firmware updates are no longer focus on new features for SDR enthusiastic people.
+- **Z7020-specific device tree** — correct model string (`Z7020/AD9361`) in both
+  Linux and U-Boot, under `board/tezuka/fishball7020/`
+- **Windows Docker build pipeline** — `build.bat` / `build.sh` for building on
+  Windows via Docker with a persistent ext4 volume
+- **CRLF boot fix** — robust line-ending conversion that catches all overlay files
+  (upstream assumes Linux-native LF)
+- **Maia SDR packages** pointed at [`andylee77/maia-sdr`](https://github.com/andylee77/maia-sdr)
+  fork (`fishball-dev` branch)
 
-# Installing
-- In release section (https://github.com/F5OEO/tezuka_fw/releases)
-- Choose your right firmware depending on hardware and software, depending on name.
-- Download your selected configuration on https://github.com/F5OEO/tezuka_fw/releases
-- Unzip it.
-- **DO NOT USE standard method of flashing with frm**
-- Write SD card : Copy contents of sdimg folder to a fresh FAT32 card formated.
-  
-**ONLY FOR PLUTOSDR (no SD card) :**
-- Flash on memory : paste pluto.frm to pluto drive and eject (detailed update procedure https://wiki.analog.com/university/tools/pluto/users/firmware)
+See [CHANGELOG.md](CHANGELOG.md) for the full history and
+[doc/changes/](doc/changes/) for detailed write-ups of each change.
 
-# Disclaimer
+## Quick start
 
-Most of boards use non protected flash memory. Flashing could break your card. **Until you know what you are doing, always boot in SD mode.** 
+### Prerequisites
 
-# Configuring
-A soon as firmware is updated, you could see a usb drive with parameters in config.txt (orginal parameters are described at (https://wiki.analog.com/university/tools/pluto/users/customizing)
+- Windows 10/11 with Docker Desktop
+- Docker image `br_tezuka:2025.02.3` (see [DEVLOG.md](DEVLOG.md) for build instructions)
 
-# Third party software which could use extra features
-- Satdump (https://github.com/F5OEO/SatDump)
-- sdr++ (https://github.com/F5OEO/SDRPlusPlus)
-- Soapy based software(https://github.com/F5OEO/SoapyPlutoPAPR)
+### Build
 
-Other great SDR software could use soon new features (SDRConsole, SDRAngel...), stay tuned !
+```bat
+build.bat                   # Full build (~3 min incremental, 1-3 hrs from scratch)
+build.bat --interactive     # Open a shell inside the Docker build environment
+build.bat --clean           # Delete build cache and start fresh
+```
 
-# Calling for contribution
-If you like this firmware you can help me maintaining it by
-- Donate at https://paypal.me/f5oeodev
-- Write some documentation
-- Make some pull request
+Build output lands in `output_images/`.
 
+### Flash to SD card
 
-# For developers
-## Building from source (linux Debian based)
-### Install once
-#### Add required packages
-Buildroot documentation has the [list of required packages](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory).
+1. Format an SD card as FAT32
+2. Copy the contents of `output_images/` to the card
+3. Boot the Fishball Z7020 from SD
 
-The following packages must be installed for building Maia-fw related code:
+### Verify
+
+```bash
+ssh root@192.168.120.50 'cat /sys/firmware/devicetree/base/model'
+# Expected: FISH Ball PlutoSDR Rev.A (Z7020/AD9361)
+```
+
+## Building on Linux
+
+If you're on Linux (or WSL2) you can build without Docker:
+
+```bash
+git clone https://github.com/andylee77/tezuka_fw
+cd tezuka_fw
+./getbuildroot.sh
+source sourceme.first
+cd buildroot
+make fishball_maiasdr_7020_defconfig && make
+```
+
+See upstream [Buildroot requirements](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory)
+for host dependencies. Maia SDR additionally needs:
+
 ```bash
 sudo apt install pkg-config libssl-dev libclang-dev
 ```
 
-Now clone this repo and get buildroot
-```bash
-git clone https://github.com/F5OEO/tezuka_fw
-cd tezuka_fw
-./getbuildroot.sh
+## Repository layout
 
-```
-### Build
-```bash
-source sourceme.first
-cd buildroot
-# If you want to use the build in a Docker container, then run the following command here:
-#  utils/docker-run
-make pluto_maiasdr_defconfig && make
+```text
+board/tezuka/fishball7020/   Z7020-specific DTS and U-Boot files (this fork)
+board/tezuka/common/         Shared overlays and post-build scripts
+configs/                     Buildroot defconfigs
+package/                     External Buildroot packages (maia-httpd, maia-wasm, etc.)
+doc/changes/                 Detailed change documentation
+output_images/               Build output (gitignored)
 ```
 
-For a list all supported boards run (this might take a while):
-```bash
-make list-defconfigs
-```
-The items at the bottom are the ones supported by Tezuka.
+## Branches
 
-### Building on WSL2 
-Buildroot does not allow whitespaces in the PATH environment variable. On WSL several paths with whitespaces are added. The following script can be used to remove any path with whitespaces. It also deletes any leftover ':' at the end:
-```bash
-export PATH=$(echo $PATH | tr ':' '\n' | grep -v ' ' | tr '\n' ':' | sed 's/:$//')
-```
-### Compatibility with older build scripts
+| Branch         | Purpose                                                    |
+|----------------|------------------------------------------------------------|
+| `main`         | Tracks upstream `F5OEO/tezuka_fw` — kept clean for syncing |
+| `fishball-dev` | Active development branch                                  |
 
-If you encounter errors related to CMAKE policy version, it's because newer versions of CMAKE (3.27+) have stricter policy requirements. Setting CMAKE_POLICY_VERSION_MINIMUM=3.5 tells CMAKE to use policies from version 3.5 or newer, which helps maintain compatibility with older build scripts and dependencies that may not be fully compatible with the latest CMAKE policies. This is particularly important when building packages that haven't been updated to support newer CMAKE versions.
+## Related repositories
 
-Run the build with:
+| Repo                                                          | Purpose                             |
+|---------------------------------------------------------------|-------------------------------------|
+| [andylee77/maia-sdr](https://github.com/andylee77/maia-sdr)  | Maia SDR fork (httpd + wasm + FPGA) |
+| [F5OEO/tezuka_fw](https://github.com/F5OEO/tezuka_fw)        | Upstream firmware project           |
 
-```bash
-CMAKE_POLICY_VERSION_MINIMUM=3.5 make
-```
+## Credits
 
-### Result
-All materials are in buildroot/output/images
+This fork builds on the work of:
 
-# Credits
-- Daniel Estévez for incredible maia-sdr project (https://maia-sdr.org/)
-- Gwenhael Goavec-Merou for inspiration https://github.com/oscimp/PlutoSDR
-- LamaBleu for helping me with buildroot and introduce me Plutosdr
-- https://github.com/hz12opensource/libresdr for overclock and fpga inspiration
-- All the opensource community !
-
-
-
-
+- **F5OEO** — original tezuka_fw project
+- **Daniel Estevez** — [Maia SDR](https://maia-sdr.org/)
+- The PlutoSDR and Buildroot open-source communities

@@ -7,3 +7,5 @@ u_uac2.h
 *.swp
 output_images/
 .clinerules
+.claude/
+CLAUDE.md
