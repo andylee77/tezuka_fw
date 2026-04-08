@@ -50,6 +50,10 @@ for %%L in (a b c d e f g h i j k l m n o p q r s t u v w x y z) do (
 )
 set "DOCKER_SRC=/%DRIVE_LOWER%%REST%"
 
+REM Fishball P25 source mount (for local p25-httpd builds)
+set "P25_DIR=C:\Users\Andy\Projects\fishball-p25"
+set "P25_DOCKER=/mnt/fishball-p25"
+
 echo [OK] Project: %PROJECT_DIR%
 echo [OK] Docker mount: %DOCKER_SRC%
 
@@ -99,6 +103,7 @@ if "%INTERACTIVE%"=="true" (
     docker run -it --rm ^
         --user 0:0 ^
         -v "%PROJECT_DIR%:%DOCKER_SRC%" ^
+        -v "%P25_DIR%:%P25_DOCKER%:ro" ^
         -v %DOCKER_VOLUME%:/home/br-user/tezuka_build ^
         -e "SRC_MOUNT=%DOCKER_SRC%" ^
         -e "DEFCONFIG=%DEFCONFIG%" ^
@@ -118,6 +123,7 @@ if "%INTERACTIVE%"=="true" (
     docker run -i --rm ^
         --user 0:0 ^
         -v "%PROJECT_DIR%:%DOCKER_SRC%" ^
+        -v "%P25_DIR%:%P25_DOCKER%:ro" ^
         -v %DOCKER_VOLUME%:/home/br-user/tezuka_build ^
         -e "SRC_MOUNT=%DOCKER_SRC%" ^
         -e "DEFCONFIG=%DEFCONFIG%" ^

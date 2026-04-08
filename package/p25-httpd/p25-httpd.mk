@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-P25_HTTPD_VERSION = main
-P25_HTTPD_SITE = https://github.com/andylee77/fishball-p25.git
-P25_HTTPD_SITE_METHOD = git
+P25_HTTPD_VERSION = v0.1.0
+P25_HTTPD_SITE = /mnt/fishball-p25
+P25_HTTPD_SITE_METHOD = local
 
 CROSS_COMPILE = arm-none-linux-gnueabihf-
 TOOLCHAINS = "$(HOST_DIR)/bin/$(CROSS_COMPILE)gcc"
