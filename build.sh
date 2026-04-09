@@ -134,6 +134,38 @@ if [ -n "$FPGA_PKG" ] && [ -f "$FPGA_XSA" ]; then
     fi
 fi
 
+# Force-rebuild p25-httpd or maia-httpd if the maia-sdr source is newer.
+# The maia-sdr repo is mounted read-only at /mnt/maia-sdr; Buildroot
+# rsyncs it into the build dir. Detect if source changed since last build.
+MAIA_SRC="/mnt/maia-sdr"
+if [ -d "$MAIA_SRC/p25-httpd" ]; then
+    P25_STAMP=$(ls output/build/p25-httpd-*/.stamp_rsynced 2>/dev/null | head -1)
+    if [ -n "$P25_STAMP" ]; then
+        # Check if any Rust/TOML/SVD source is newer than the cached build
+        NEWER=$(find "$MAIA_SRC/p25-httpd" \
+            \( -name '*.rs' -o -name '*.toml' -o -name '*.svd' \) \
+            -newer "$P25_STAMP" 2>/dev/null | head -1)
+        if [ -n "$NEWER" ]; then
+            log "  p25-httpd source changed ($(basename "$NEWER")) — forcing rebuild..."
+            make p25-httpd-dirclean 2>/dev/null || true
+        else
+            log "  p25-httpd is up to date."
+        fi
+    fi
+fi
+if [ -d "$MAIA_SRC/maia-httpd" ]; then
+    MAIA_STAMP=$(ls output/build/maia-httpd-*/.stamp_rsynced 2>/dev/null | head -1)
+    if [ -n "$MAIA_STAMP" ]; then
+        NEWER=$(find "$MAIA_SRC/maia-httpd" \
+            \( -name '*.rs' -o -name '*.toml' -o -name '*.svd' \) \
+            -newer "$MAIA_STAMP" 2>/dev/null | head -1)
+        if [ -n "$NEWER" ]; then
+            log "  maia-httpd source changed ($(basename "$NEWER")) — forcing rebuild..."
+            make maia-httpd-dirclean 2>/dev/null || true
+        fi
+    fi
+fi
+
 echo ""
 log "Step 7: Building firmware..."
 info "  First build: 1-3 hours | Cached rebuild: 20-40 min"
