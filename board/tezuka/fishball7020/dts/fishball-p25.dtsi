@@ -56,19 +56,19 @@
 		#size-cells = <1>;
 		ranges;
 
-		/* Control channel dibit DMA: 1 MB at 0x17000000
-		   Must match FPGA config (p25_hdl/config.py dibit_dma_address) */
+		/* Control channel dibit ring DMA: 8 x 4KB = 32 KB at 0x17000000
+		   Must match FPGA config (p25_hdl/config.py dibit_dma_*) */
 		p25_dibit_dma: p25-dibit-dma@17000000 {
 			no-map;
-			reg = <0x17000000 0x100000>;
+			reg = <0x17000000 0x8000>;
 			label = "p25_dibit_dma";
 		};
 
-		/* Traffic channel dibit DMA: 1 MB at 0x18000000
-		   Must match FPGA config (p25_hdl/config.py traffic_dma_address) */
+		/* Traffic channel dibit ring DMA: 8 x 4KB = 32 KB at 0x18000000
+		   Must match FPGA config (p25_hdl/config.py traffic_dma_*) */
 		p25_traffic_dma: p25-traffic-dma@18000000 {
 			no-map;
-			reg = <0x18000000 0x100000>;
+			reg = <0x18000000 0x8000>;
 			label = "p25_traffic_dma";
 		};
 	};
