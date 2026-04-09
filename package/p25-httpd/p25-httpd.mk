@@ -5,7 +5,7 @@
 ################################################################################
 
 P25_HTTPD_VERSION = v0.1.0
-P25_HTTPD_SITE = /mnt/fishball-p25
+P25_HTTPD_SITE = /mnt/maia-sdr
 P25_HTTPD_SITE_METHOD = local
 
 CROSS_COMPILE = arm-none-linux-gnueabihf-
