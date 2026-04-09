@@ -112,6 +112,28 @@ log "Step 6: Applying defconfig ($DEFCONFIG)..."
 make "$DEFCONFIG"
 log "  ✓ Defconfig applied"
 
+# Force-rebuild the FPGA package if the source XSA is newer than
+# the cached package. This handles both config switches and XSA updates.
+FPGA_PKG=""
+FPGA_XSA=""
+if grep -q 'BR2_PACKAGE_FISHBALL_FPGA_P25=y' .config 2>/dev/null; then
+    FPGA_PKG="fishball_fpga_p25"
+    FPGA_XSA="$BUILD_HOME/board/tezuka/fishball7020/bitstream/p25/system_top.xsa"
+elif grep -q 'BR2_PACKAGE_FISHBALL_FPGA_7020=y' .config 2>/dev/null; then
+    FPGA_PKG="fishball_fpga_7020"
+    FPGA_XSA="$BUILD_HOME/board/tezuka/fishball7020/bitstream/maia-iio/system_top.xsa"
+fi
+
+if [ -n "$FPGA_PKG" ] && [ -f "$FPGA_XSA" ]; then
+    STAMP=$(ls output/build/${FPGA_PKG}-*/.stamp_rsynced 2>/dev/null | head -1)
+    if [ -z "$STAMP" ] || [ "$FPGA_XSA" -nt "$STAMP" ]; then
+        log "  FPGA XSA is newer than cached package — forcing $FPGA_PKG rebuild..."
+        make ${FPGA_PKG}-dirclean 2>/dev/null || true
+    else
+        log "  FPGA package $FPGA_PKG is up to date."
+    fi
+fi
+
 echo ""
 log "Step 7: Building firmware..."
 info "  First build: 1-3 hours | Cached rebuild: 20-40 min"
