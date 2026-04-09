@@ -56,22 +56,24 @@
 		#size-cells = <1>;
 		ranges;
 
-		/* Control channel dibit DMA ring buffer: 8 x 4KB = 32KB */
-		p25_dibit_dma: p25-dibit-dma@16000000 {
+		/* Control channel dibit DMA: 1 MB at 0x17000000
+		   Must match FPGA config (p25_hdl/config.py dibit_dma_address) */
+		p25_dibit_dma: p25-dibit-dma@17000000 {
 			no-map;
-			reg = <0x16000000 0x8000>;
+			reg = <0x17000000 0x100000>;
 			label = "p25_dibit_dma";
 		};
 
-		/* Traffic channel dibit DMA ring buffer: 8 x 4KB = 32KB */
-		p25_traffic_dma: p25-traffic-dma@16008000 {
+		/* Traffic channel dibit DMA: 1 MB at 0x18000000
+		   Must match FPGA config (p25_hdl/config.py traffic_dma_address) */
+		p25_traffic_dma: p25-traffic-dma@18000000 {
 			no-map;
-			reg = <0x16008000 0x8000>;
+			reg = <0x18000000 0x100000>;
 			label = "p25_traffic_dma";
 		};
 	};
 
-	/* P25 DMA buffer devices — uses maia-kmod rxbuffer driver */
+	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
 	p25-dibit {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_dibit_dma>;
