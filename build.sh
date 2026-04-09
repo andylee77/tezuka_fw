@@ -139,14 +139,11 @@ fi
 # rsyncs it into the build dir. Detect if source changed since last build.
 MAIA_SRC="/mnt/maia-sdr"
 if [ -d "$MAIA_SRC/p25-httpd" ]; then
-    P25_STAMP=$(ls output/build/p25-httpd-*/.stamp_rsynced 2>/dev/null | head -1)
+    P25_STAMP=$(find output/build/ -maxdepth 2 -name '.stamp_rsynced' -path '*/p25-httpd-*/*' 2>/dev/null | head -1 || true)
     if [ -n "$P25_STAMP" ]; then
-        # Check if any Rust/TOML/SVD source is newer than the cached build
-        NEWER=$(find "$MAIA_SRC/p25-httpd" \
-            \( -name '*.rs' -o -name '*.toml' -o -name '*.svd' \) \
-            -newer "$P25_STAMP" 2>/dev/null | head -1)
+        NEWER=$(find "$MAIA_SRC/p25-httpd" \( -name '*.rs' -o -name '*.toml' -o -name '*.svd' \) -newer "$P25_STAMP" 2>/dev/null | head -1 || true)
         if [ -n "$NEWER" ]; then
-            log "  p25-httpd source changed ($(basename "$NEWER")) — forcing rebuild..."
+            log "  p25-httpd source changed ($(basename "$NEWER")) -- forcing rebuild..."
             make p25-httpd-dirclean 2>/dev/null || true
         else
             log "  p25-httpd is up to date."
@@ -154,13 +151,11 @@ if [ -d "$MAIA_SRC/p25-httpd" ]; then
     fi
 fi
 if [ -d "$MAIA_SRC/maia-httpd" ]; then
-    MAIA_STAMP=$(ls output/build/maia-httpd-*/.stamp_rsynced 2>/dev/null | head -1)
+    MAIA_STAMP=$(find output/build/ -maxdepth 2 -name '.stamp_rsynced' -path '*/maia-httpd-*/*' 2>/dev/null | head -1 || true)
     if [ -n "$MAIA_STAMP" ]; then
-        NEWER=$(find "$MAIA_SRC/maia-httpd" \
-            \( -name '*.rs' -o -name '*.toml' -o -name '*.svd' \) \
-            -newer "$MAIA_STAMP" 2>/dev/null | head -1)
+        NEWER=$(find "$MAIA_SRC/maia-httpd" \( -name '*.rs' -o -name '*.toml' -o -name '*.svd' \) -newer "$MAIA_STAMP" 2>/dev/null | head -1 || true)
         if [ -n "$NEWER" ]; then
-            log "  maia-httpd source changed ($(basename "$NEWER")) — forcing rebuild..."
+            log "  maia-httpd source changed ($(basename "$NEWER")) -- forcing rebuild..."
             make maia-httpd-dirclean 2>/dev/null || true
         fi
     fi
