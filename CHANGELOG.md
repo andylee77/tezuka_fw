@@ -83,6 +83,85 @@ ssh root@192.168.120.50 'cat /sys/firmware/devicetree/base/model'
 
 ---
 
+## [2026-04-10] Change 004 — P25 LSM Dibit DMA Reserved Memory + rxbuffer Node
+
+**Doc:** `doc/changes/004_p25_lsm_dibit_dma_reserved_memory.md`
+**Branch:** fishball-dev
+**Related:** maia-sdr Phase 6E.9 / 6E.10
+(`doc/changes/018_phase6e9_lsm_top_integration.md`,
+`019_phase6e10_vivado_bake.md`)
+
+### What
+
+Add a fourth `reserved-memory` carve-out and matching `maia-sdr,rxbuffer`
+device-tree node to expose the Phase 6E.9 HDL LSM demod's dibit ring DMA
+to userspace as `/dev/p25-lsm-dibit`. This is the kernel-side bridge
+that lets the p25-httpd Phase 6E.9/6E.10 HDL LSM dibit reader task and
+NID poller drain the new ring and read the new `lsm_*` AXI register bank.
+
+### Files changed
+
+- `board/tezuka/fishball7020/dts/fishball-p25.dtsi`
+  - New `p25_lsm_dibit_dma: p25-lsm-dibit-dma@1a000000` reserved-memory
+    node (`reg = <0x1a000000 0x8000>`, 32 KB, `no-map`).
+  - New `p25-lsm-dibit` node with `compatible = "maia-sdr,rxbuffer"`,
+    `memory-region = <&p25_lsm_dibit_dma>`, `buffer-size = <0x1000>`.
+  - Yields 8 sub-buffers x 4 KB at runtime, matching the FPGA-side
+    `lsm_dibit_dma_num_buffers_log2 = 3` and
+    `lsm_dibit_dma_buffer_size = 0x1000`. Geometry is byte-identical
+    to the existing `p25_dibit_dma` (C4FM) ring.
+
+### Why
+
+The Phase 6E.9 gateware wires `LsmDemod` into `P25Core` alongside the
+existing C4FM chain, producing a second 4800 sym/s dibit stream on the
+control channel, and gives it a dedicated 32 KB ring at `0x1A000000`.
+The two rings share the same control DDC output so the PS can drain
+both in parallel and A/B the two decoders on a single live RF capture --
+essential for bring-up against the Clay County NAC 0x8A1 simulcast site
+where the C4FM chain does not lock and the LSM chain is the whole
+reason Phase 6E exists.
+
+Without a `reserved-memory` entry the kernel will happily allocate
+generic pages out of `0x1A000000`, and without the matching
+`maia-sdr,rxbuffer` node the maia-kmod driver does not create the
+`/dev/p25-lsm-dibit` chardev that p25-httpd's Phase 6E.10 `fpga.rs`
+`IpCore::take()` expects to open.
+
+### Verification (queued)
+
+This change is queued behind the next `build.bat --p25` Tezuka firmware
+rebuild (and the parallel maia-sdr Phase 6E.10 Vivado bake that produces
+the new XSA). After flashing:
+
+- `ls -l /dev/p25-lsm-dibit` should exist with the rxbuffer driver bound
+- `cat /sys/class/maia-sdr/p25-lsm-dibit/device/buffer_size` -> `0x1000`
+- `cat /sys/class/maia-sdr/p25-lsm-dibit/device/num_buffers` -> `8`
+- `cat /proc/iomem | grep 1a00_0000` should show the carve-out reserved
+- `/var/log/p25-httpd.log` should show "HDL LSM dibit reader task started
+  (Phase 6E)" and "HDL LSM NID poller task started (Phase 6E)"
+- Against the Clay County control channel the NID poller should start
+  logging NID events at ~14 ms cadence with `nac=0x8A1` and
+  `valid=true`, `n_errors<=11`, `drop_count=0`
+
+If anything is missing the rest of p25-httpd (the C4FM dibit pipeline,
+the Phase 6D PS-side LSM pipeline, the web dashboard) keeps running
+unaffected -- only the HDL LSM reader + NID poller tasks fail to spawn.
+
+### What does NOT change
+
+- The `p25_dibit_dma@17000000`, `p25_traffic_dma@18000000`, and
+  `p25_iq_dma@19000000` reservations are untouched.
+- The `p25_core: p25-core@7c460000` UIO node and IRQ wiring are
+  unchanged. The new `lsm_dibit_dma` interrupt is multiplexed into the
+  same `interrupt_out` line at bit 3 of the IP-core `interrupts`
+  register; userspace decodes the bit in `p25-httpd/src/fpga.rs`.
+- AD9361, `rx_dma`/`tx_dma`, SPI, GPIOs, USB, MAC, QSPI are untouched.
+- All non-Z7020 board files (e200, e310, libre, nano, fishball7010,
+  pluto) are untouched.
+
+---
+
 ## [2026-04-09] Change 003 — P25 IQ DMA Reserved Memory + rxbuffer Node
 
 **Doc:** `doc/changes/003_p25_iq_dma_reserved_memory.md`

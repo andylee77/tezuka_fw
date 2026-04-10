@@ -1,4 +1,20 @@
 #!/bin/sh
+#
+# p25-httpd init script.
+#
+# Note on stdout/stderr: start-stop-daemon -b detaches the process from the
+# controlling terminal and busybox closes its standard streams, so any
+# tracing::info!/warn!/error! calls in the binary disappear into /dev/null.
+# We work around that by exec'ing the binary inside a sh -c that redirects
+# stdout+stderr to /var/log/p25-httpd.log. Using exec means the recorded
+# pid (via -m) is the p25-httpd process itself, not the wrapper sh -- so
+# stop/restart work normally.
+#
+# The previous log is rotated to .prev on each start so a crash leaves a
+# diagnostic trail across reboots.
+
+LOG=/var/log/p25-httpd.log
+PIDF=/var/run/p25-httpd.pid
 
 case "$1" in
   start)
@@ -7,15 +23,19 @@ case "$1" in
             xz -d /usr/bin/p25-httpd.xz
             chmod +x /usr/bin/p25-httpd
         fi
+        mkdir -p /var/log
+        [ -f "$LOG" ] && mv "$LOG" "${LOG}.prev"
         cd /root
-        start-stop-daemon -S -b -q -m -p /var/run/p25-httpd.pid \
-            -x /usr/bin/p25-httpd -- \
-            --listen 0.0.0.0:8080 \
-            --rx-lo 858100000 \
-            --sample-rate 8000000 \
-            --control-freq 860962500
+        start-stop-daemon -S -b -q -m -p "$PIDF" \
+            -x /bin/sh -- -c \
+            "exec /usr/bin/p25-httpd \
+                --listen 0.0.0.0:8080 \
+                --rx-lo 858100000 \
+                --sample-rate 8000000 \
+                --control-freq 860962500 \
+                >> $LOG 2>&1"
         cd - > /dev/null
-	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	[ $? = 0 ] && echo "OK ($LOG)" || echo "FAIL"
 	;;
   stop)
         echo -n "Stopping p25-httpd: "

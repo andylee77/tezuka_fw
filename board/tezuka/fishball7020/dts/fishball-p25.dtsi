@@ -81,6 +81,17 @@
 			reg = <0x19000000 0x40000>;
 			label = "p25_iq_dma";
 		};
+
+		/* Phase 6E.9/6E.10: HDL LSM control-channel dibit ring DMA,
+		   8 x 4 KB = 32 KB at 0x1a000000. Parallel to p25_dibit_dma
+		   (the C4FM dibit ring) so the PS can A/B both demods on one
+		   RF capture. Geometry mirrors p25_dibit_dma exactly. Must
+		   match FPGA config (p25_hdl/config.py lsm_dibit_dma_*). */
+		p25_lsm_dibit_dma: p25-lsm-dibit-dma@1a000000 {
+			no-map;
+			reg = <0x1a000000 0x8000>;
+			label = "p25_lsm_dibit_dma";
+		};
 	};
 
 	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
@@ -100,6 +111,12 @@
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_iq_dma>;
 		buffer-size = <0x8000>;
+	};
+
+	p25-lsm-dibit {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_lsm_dibit_dma>;
+		buffer-size = <0x1000>;
 	};
 };
 
