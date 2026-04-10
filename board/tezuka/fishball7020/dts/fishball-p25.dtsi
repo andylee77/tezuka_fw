@@ -71,6 +71,16 @@
 			reg = <0x18000000 0x8000>;
 			label = "p25_traffic_dma";
 		};
+
+		/* Phase 6C/6D: post-DDC IQ ring DMA, 8 x 32 KB = 256 KB at
+		   0x19000000. Carries 62.5 kSPS interleaved 16-bit signed I/Q
+		   (~128 ms per sub-buffer, ~1 s of audio in flight). Must
+		   match FPGA config (p25_hdl/config.py iq_dma_*). */
+		p25_iq_dma: p25-iq-dma@19000000 {
+			no-map;
+			reg = <0x19000000 0x40000>;
+			label = "p25_iq_dma";
+		};
 	};
 
 	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
@@ -84,6 +94,12 @@
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_traffic_dma>;
 		buffer-size = <0x1000>;
+	};
+
+	p25-iq {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_iq_dma>;
+		buffer-size = <0x8000>;
 	};
 };
 

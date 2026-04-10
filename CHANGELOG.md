@@ -83,6 +83,69 @@ ssh root@192.168.120.50 'cat /sys/firmware/devicetree/base/model'
 
 ---
 
+## [2026-04-09] Change 003 — P25 IQ DMA Reserved Memory + rxbuffer Node
+
+**Doc:** `doc/changes/003_p25_iq_dma_reserved_memory.md`
+**Branch:** fishball-dev
+**Related:** maia-sdr Phase 6C/6D (`docs/changes/013_phase6c_iq_dma.md`,
+`014_phase6d_lsm_rust_port.md`)
+
+### What
+
+Add a third `reserved-memory` carve-out and matching `maia-sdr,rxbuffer`
+device-tree node to expose the Phase 6C post-DDC IQ ring DMA to userspace
+as `/dev/p25-iq`. This is the kernel-side bridge that lets the Phase 6D
+Rust LSM demod in `p25-httpd/src/lsm/` consume raw 62.5 kSPS IQ samples
+from the FPGA.
+
+### Files changed
+
+- `board/tezuka/fishball7020/dts/fishball-p25.dtsi`
+  - New `p25_iq_dma: p25-iq-dma@19000000` reserved-memory node
+    (`reg = <0x19000000 0x40000>`, 256 KB, `no-map`).
+  - New `p25-iq` node with `compatible = "maia-sdr,rxbuffer"`,
+    `memory-region = <&p25_iq_dma>`, `buffer-size = <0x8000>`.
+  - Yields 8 sub-buffers × 32 KB at runtime, matching the FPGA-side
+    `iq_dma_num_buffers_log2 = 3` and `iq_dma_buffer_size = 0x8000`.
+
+### Why
+
+The Phase 6C gateware writes 62.5 kSPS interleaved 16-bit signed I/Q
+into a hard-coded 256 KB ring at `0x19000000`. Without a `reserved-memory`
+entry the kernel will allocate generic pages out of that region, and
+without the matching `maia-sdr,rxbuffer` node the maia-kmod driver does
+not create the `/dev/p25-iq` chardev that p25-httpd expects to open.
+
+### Verification (queued)
+
+This change is queued behind the next `build.bat --p25` Tezuka firmware
+rebuild. After flashing:
+
+- `ls -l /dev/p25-iq` should exist with the rxbuffer driver bound
+- `cat /sys/class/maia-sdr/p25-iq/device/buffer_size` → `0x8000`
+- `cat /sys/class/maia-sdr/p25-iq/device/num_buffers` → `8`
+- `cat /proc/iomem | grep 19000000` should show the carve-out reserved
+- `/var/log/p25-httpd.log` should show "LSM IQ reader task started
+  (Phase 6D)" and per-IRQ wakeups at ~7.6 Hz
+
+If anything is missing the rest of p25-httpd (the dibit pipeline + web
+dashboard) keeps running unaffected — the LSM reader task simply fails
+to spawn.
+
+### What does NOT change
+
+- The `p25_dibit_dma@17000000` and `p25_traffic_dma@18000000`
+  reservations are untouched.
+- The `p25_core: p25-core@7c460000` UIO node and IRQ wiring are
+  unchanged. The new iq_dma interrupt is multiplexed into the same
+  `interrupt_out` line at bit 2 of the existing IP-core `interrupts`
+  register; userspace decodes the bit in `p25-httpd/src/fpga.rs`.
+- AD9361, `rx_dma`/`tx_dma`, SPI, GPIOs, USB, MAC, QSPI are untouched.
+- All non-Z7020 board files (e200, e310, libre, nano, fishball7010,
+  pluto) are untouched.
+
+---
+
 ## [2026-03-09] Change 002 — Fix Z7020 Boot Failure (CRLF + Board Path)
 
 **Doc:** `doc/changes/002_fix_7020_boot_fsbl_mismatch.md`

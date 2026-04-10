@@ -209,3 +209,4 @@ build.bat --clean
 | 2026-03-08 | Change 001 | Z7020 model string fix — new DTS files, defconfig update |
 | 2026-03-08 | Build infra | Created `build.bat`/`build.sh`, set up Docker build pipeline |
 | 2026-03-08 | Build 001 | First successful firmware build (~3 min cached), output verified |
+| 2026-04-09 | Change 003 | P25 IQ DMA reserved memory + `p25-iq` rxbuffer node in `fishball-p25.dtsi`. Bridges Phase 6C FPGA gateware (`iq_dma` ring at `0x19000000`, 8×32 KB) to Phase 6D Rust LSM demod (`p25-httpd/src/lsm/`) via `/dev/p25-iq`. See `doc/changes/003_p25_iq_dma_reserved_memory.md` and maia-sdr `doc/changes/014_phase6d_lsm_rust_port.md`. |
