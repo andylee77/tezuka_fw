@@ -33,6 +33,7 @@ case "$1" in
                 --rx-lo 858100000 \
                 --sample-rate 8000000 \
                 --control-freq 860962500 \
+                --lo-ppm -0.54 \
                 >> $LOG 2>&1"
         cd - > /dev/null
 	[ $? = 0 ] && echo "OK ($LOG)" || echo "FAIL"
