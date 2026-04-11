@@ -5,6 +5,88 @@ Upstream: [F5OEO/tezuka_fw](https://github.com/F5OEO/tezuka_fw)
 
 ---
 
+## [2026-04-11] Bitstream refresh — maia-sdr Phase 6G.1 + Phase 6 closeout
+
+**Branch:** fishball-dev
+**Related:** maia-sdr Phase 6G.1 (`doc/changes/031_phase6g1_hdl_dc_blocker.md`),
+maia-sdr Phase 6 closeout (`doc/changes/032_phase6_closeout.md`)
+**Tezuka commits:** `08f7607` (Phase 6G.1 XSA refresh)
+
+### What changed in Tezuka
+
+Just the bitstream artefact at
+`board/tezuka/fishball7020/bitstream/p25/system_top.xsa` was
+refreshed to the maia-sdr Phase 6G.1 bake (commit `08f7607` here).
+No source / DTS / config changes — the new XSA carries the HDL
+DC blocker on the LSM IQ input that maia-sdr commit `3ea56fb`
+added, runtime bypassable through a new `lsm_control[2]`
+register field.
+
+### What changed on the maia-sdr side that this XSA enables
+
+The maia-sdr `fishball-p25` branch closed out Phase 6
+(LSM trunking control channel decode) on 2026-04-11. The full
+phase rollup, deferral list, and Phase 7 plan live in
+`doc/changes/032_phase6_closeout.md` over there. The pieces
+that the firmware operator should know about:
+
+1. **HDL DC blocker on the LSM IQ input** (Phase 6G.1) —
+   in this XSA. Defaults to ON at p25-httpd startup, runtime
+   bypassable via the new `/api/lsm_control` endpoint.
+2. **TG dedup in `/api/grants`** (maia-sdr commit `6dfef49`) —
+   was showing the same TG repeated 5+ times across stale
+   channels; now each TG appears exactly once at its current
+   channel.
+3. **Source RadioId preservation across grant updates**
+   (maia-sdr commit `1e29839`) — the dashboard's caller ID
+   no longer drops to None on every periodic
+   `GroupVoiceChannelGrantUpdate` refresh.
+4. **`/api/lsm_control` runtime read/write endpoint** (Phase
+   6G.2) — DC blocker can be A/B tested at runtime via
+   `curl 'http://192.168.2.1:8080/api/lsm_control?dc_block=0|1'`
+   without ssh + devmem on the board.
+
+### How to deploy
+
+Items (1) is in this XSA — already shipped via `08f7607` and
+flashed in the previous firmware build. Items (2)-(4) are
+PS-only changes in `p25-httpd` and need ONE more Tezuka
+firmware rebuild to get them onto the board. The XSA does not
+need to be rebuilt:
+
+```bash
+cd C:\Users\Andy\Projects\Tezuka\tezuka_fw && build.bat --p25
+```
+
+Buildroot will pick up the latest `p25-httpd` source from the
+maia-sdr fork (`fishball-p25` branch HEAD) and rebuild only
+the binary. After flashing the resulting `.frm` / `.zip`,
+verify with:
+
+```bash
+curl http://192.168.2.1:8080/api/system | python -m json.tool
+# build field should read: 2026-04-11-phase6-closeout-lsm_control-runtime-toggle
+
+curl http://192.168.2.1:8080/api/lsm_control
+# should return all three lsm_*_enable bits = true
+```
+
+### What this concludes
+
+maia-sdr Phase 6 — the multi-month port of an LSM Simulcast P25
+control channel decoder onto the Fishball Z7020 — is now done.
+The radio decodes the Clay County NAC 0x8A1 LSM control
+channel end-to-end at ~76-80 % steady-state TSBK CRC pass with
+~88 % opcode coverage, real-time TG tracking, and the standard
+trunking dashboard surface area. Phase 7 (voice channel
+follow + LDU/IMBE + RTP audio out) is the next session and
+will start on the maia-sdr side with a second DDC instance in
+`p25_top.py` plus a new `voice_control` register bank — that
+WILL need a Tezuka rebuild + new device-tree entry for a
+second `voice_dibit_dma` ring, but those are Phase 7 problems.
+
+---
+
 ## [2026-03-08] Project Setup
 
 ### Fork & Repository
