@@ -92,6 +92,20 @@
 			reg = <0x1a000000 0x8000>;
 			label = "p25_lsm_dibit_dma";
 		};
+
+		/* Phase 7A.2: HDL LSM traffic-channel dibit ring DMA,
+		   8 x 4 KB = 32 KB at 0x1b000000. Parallel to p25_traffic_dma
+		   (the C4FM traffic dibit ring) so the PS can A/B both
+		   modulations on a followed voice channel and dispatch
+		   HDU/TDU/LDU events from the new traffic_lsm register
+		   bank (0x7c4600c0). Geometry mirrors p25_lsm_dibit_dma
+		   exactly. Must match FPGA config
+		   (p25_hdl/config.py traffic_lsm_dibit_dma_*). */
+		p25_traffic_lsm_dibit_dma: p25-traffic-lsm-dibit-dma@1b000000 {
+			no-map;
+			reg = <0x1b000000 0x8000>;
+			label = "p25_traffic_lsm_dibit_dma";
+		};
 	};
 
 	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
@@ -116,6 +130,16 @@
 	p25-lsm-dibit {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_lsm_dibit_dma>;
+		buffer-size = <0x1000>;
+	};
+
+	/* Phase 7A.2: traffic-channel LSM dibit ring -- exposes the
+	   p25_traffic_lsm_dibit_dma carve-out as the "p25-traffic-lsm-dibit"
+	   UIO device that p25-httpd opens via
+	   `RxBuffer::new("p25-traffic-lsm-dibit")` in fpga.rs::take(). */
+	p25-traffic-lsm-dibit {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_traffic_lsm_dibit_dma>;
 		buffer-size = <0x1000>;
 	};
 };
