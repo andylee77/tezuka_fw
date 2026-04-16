@@ -452,7 +452,16 @@
 		/* AuxADC Temp Sense Control */
 
 		adi,temp-sense-measurement-interval-ms = <1000>;
-		adi,temp-sense-offset-signed = <0xB6>;
+		/*
+		 * FIXME: PLACEHOLDER CALIBRATION — verify against external thermometer.
+		 * Previous value 0xB6 (182u / -74s) reported ~8 C on a board that was
+		 * actually ~34 C (stock firmware matched ambient + self-heat). Each LSB
+		 * is roughly 1 C at the AD9361 slope of ~1.14 codes/C, so +26 C of
+		 * under-reporting maps to +26 codes => 0xB6 + 0x1A = 0xD0 as a starting
+		 * point. Calibrate per unit: boot, `iio_attr -c ad9361-phy temp0 input`,
+		 * compare to a real thermometer, adjust offset until matched.
+		 */
+		adi,temp-sense-offset-signed = <0xD0>;
 		adi,temp-sense-periodic-measurement-enable;
 
 		/* AuxDAC Control */
