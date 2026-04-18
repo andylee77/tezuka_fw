@@ -118,6 +118,30 @@
 			reg = <0x1c000000 0x40000>;
 			label = "p25_traffic_iq_dma";
 		};
+
+		/* Phase 10.6 2026-04-18: control-chain post-LSM
+		   matched-filter IQ ring DMA. 8 x 32 KB = 256 KB at
+		   0x1d000000. Tapped from lsm_rrc.re_out / im_out inside
+		   the FPGA LSM chain (after LsmDecimator2 /2 + LPF +
+		   105-tap RRC matched filter). 31.25 kSPS (half of post-
+		   DDC). Feeds the dashboard eye-plot card via the
+		   /ws/iq?source=post_lsm endpoint in p25-httpd. Must match
+		   FPGA config (p25_hdl/config.py lsm_iq_dma_*). */
+		p25_lsm_iq_dma: p25-lsm-iq-dma@1d000000 {
+			no-map;
+			reg = <0x1d000000 0x40000>;
+			label = "p25_lsm_iq_dma";
+		};
+
+		/* Phase 10.6 2026-04-18: traffic-chain post-LSM matched-
+		   filter IQ ring DMA. Same 256 KB geometry, tapped from
+		   traffic_lsm_rrc.re_out / im_out. Must match FPGA config
+		   (p25_hdl/config.py traffic_lsm_iq_dma_*). */
+		p25_traffic_lsm_iq_dma: p25-traffic-lsm-iq-dma@1e000000 {
+			no-map;
+			reg = <0x1e000000 0x40000>;
+			label = "p25_traffic_lsm_iq_dma";
+		};
 	};
 
 	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
@@ -162,6 +186,26 @@
 	p25-traffic-iq {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_traffic_iq_dma>;
+		buffer-size = <0x8000>;
+	};
+
+	/* Phase 10.6 2026-04-18: control-chain post-LSM matched-filter
+	   IQ ring -- exposes the p25_lsm_iq_dma carve-out as the
+	   "p25-lsm-iq" UIO device that p25-httpd opens via
+	   `RxBuffer::new("p25-lsm-iq")` in fpga.rs::take(). Drives the
+	   dashboard matched-filter eye plot. */
+	p25-lsm-iq {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_lsm_iq_dma>;
+		buffer-size = <0x8000>;
+	};
+
+	/* Phase 10.6 2026-04-18: traffic-chain post-LSM matched-filter
+	   IQ ring. Same semantics, traffic-side. p25-httpd opens via
+	   `RxBuffer::new("p25-traffic-lsm-iq")`. */
+	p25-traffic-lsm-iq {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_traffic_lsm_iq_dma>;
 		buffer-size = <0x8000>;
 	};
 };
