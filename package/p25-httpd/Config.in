@@ -2,6 +2,13 @@ config BR2_PACKAGE_P25_HTTPD
 	bool "p25_httpd"
 	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
 	select BR2_PACKAGE_HOST_RUSTC
+	# openssl binary on target is required by
+	# /etc/init.d/S50p25-httpd-certificates which generates the
+	# self-signed HTTPS cert for p25-httpd on first boot. rustls
+	# (the runtime TLS library bundled into the p25-httpd binary)
+	# does not need it, but the cert-gen shell script does.
+	select BR2_PACKAGE_OPENSSL
+	select BR2_PACKAGE_LIBOPENSSL_BIN
 	help
 	  Fishball P25 trunking radio PS application.
 	  Web dashboard, P25 control channel decoder, AD9361 IIO control.
