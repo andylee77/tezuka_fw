@@ -26,6 +26,19 @@ case "$1" in
         mkdir -p /var/log
         [ -f "$LOG" ] && mv "$LOG" "${LOG}.prev"
         cd /root
+        # Cert paths match the output of S50p25-httpd-certificates.
+        # If the cert pair is missing (e.g. JFFS2 was just wiped and
+        # S50 hasn't run yet), p25-httpd auto-falls-back to HTTP-only
+        # and logs a warning — it does NOT fail to start.
+        SSL_ARGS=""
+        if [ -f /mnt/jffs2/p25-httpd.crt ] && [ -f /mnt/jffs2/p25-httpd.key ]; then
+            SSL_ARGS="--ssl-cert /mnt/jffs2/p25-httpd.crt \
+                --ssl-key /mnt/jffs2/p25-httpd.key \
+                --listen-https 0.0.0.0:8443"
+            if [ -f /mnt/jffs2/p25-sdr-ca.crt ]; then
+                SSL_ARGS="$SSL_ARGS --ca-cert /mnt/jffs2/p25-sdr-ca.crt"
+            fi
+        fi
         start-stop-daemon -S -b -q -m -p "$PIDF" \
             -x /bin/sh -- -c \
             "exec /usr/bin/p25-httpd \
@@ -34,6 +47,7 @@ case "$1" in
                 --sample-rate 8000000 \
                 --control-freq 860962500 \
                 --lo-ppm -0.54 \
+                $SSL_ARGS \
                 >> $LOG 2>&1"
         cd - > /dev/null
 	[ $? = 0 ] && echo "OK ($LOG)" || echo "FAIL"
