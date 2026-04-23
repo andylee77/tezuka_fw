@@ -46,7 +46,7 @@ case "$1" in
                 --rx-lo 858100000 \
                 --preset 8M \
                 --control-freq 860962500 \
-                --lo-ppm -0.54 \
+                --lo-ppm 0 \
                 $SSL_ARGS \
                 >> $LOG 2>&1"
         cd - > /dev/null
