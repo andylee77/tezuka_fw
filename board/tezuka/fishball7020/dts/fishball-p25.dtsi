@@ -142,6 +142,38 @@
 			reg = <0x1e000000 0x40000>;
 			label = "p25_traffic_lsm_iq_dma";
 		};
+
+		/* Phase 10.7 2026-04-22: control-chain post-PLL IQ ring
+		   DMA. Tapped from inside LsmDemod after LsmPllRotate --
+		   samples are already carrier-derotated + AGC-scaled.
+		   9.6 kSPS (2 samples/symbol, mid+sym interleave). Feeds
+		   the Plots-tab eye + constellation + /api/deviation.
+		   Must match p25_hdl/config.py post_pll_iq_dma_*. */
+		p25_post_pll_iq_dma: p25-post-pll-iq-dma@1f000000 {
+			no-map;
+			reg = <0x1f000000 0x40000>;
+			label = "p25_post_pll_iq_dma";
+		};
+
+		/* Phase 10.7 2026-04-22: traffic-chain post-PLL IQ ring.
+		   Traffic-side twin of p25_post_pll_iq_dma. */
+		p25_traffic_post_pll_iq_dma: p25-traffic-post-pll-iq-dma@20000000 {
+			no-map;
+			reg = <0x20000000 0x40000>;
+			label = "p25_traffic_post_pll_iq_dma";
+		};
+
+		/* Phase 10.7 2026-04-22: wideband spectrometer DMA.
+		   Pre-DDC 4096-bin FFT output from the maia_hdl.Spectrometer
+		   sub-module instantiated inside p25_core. 4 x 32 KB sub-
+		   buffers = 128 KB total. 5-10 Hz integration cadence (HW-
+		   controlled via spec_num_integrations). Feeds
+		   /api/spectrum_wide; no PS FFT. */
+		p25_wideband_spec_dma: p25-wideband-spec-dma@21000000 {
+			no-map;
+			reg = <0x21000000 0x20000>;
+			label = "p25_wideband_spec_dma";
+		};
 	};
 
 	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
@@ -206,6 +238,31 @@
 	p25-traffic-lsm-iq {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_traffic_lsm_iq_dma>;
+		buffer-size = <0x8000>;
+	};
+
+	/* Phase 10.7 2026-04-22: control-chain post-PLL IQ ring.
+	   p25-httpd opens via `RxBuffer::new("p25-post-pll-iq")`.
+	   Buffer size matches the 32 KB sub-buffer geometry in the
+	   HDL DmaStreamRingWrite. */
+	p25-post-pll-iq {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_post_pll_iq_dma>;
+		buffer-size = <0x8000>;
+	};
+
+	/* Phase 10.7: traffic-side twin of p25-post-pll-iq. */
+	p25-traffic-post-pll-iq {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_traffic_post_pll_iq_dma>;
+		buffer-size = <0x8000>;
+	};
+
+	/* Phase 10.7: wideband spectrometer output. BRAM-backed DMA,
+	   one complete 4096-bin spectrum per 32 KB sub-buffer. */
+	p25-wideband-spec {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_wideband_spec_dma>;
 		buffer-size = <0x8000>;
 	};
 };
