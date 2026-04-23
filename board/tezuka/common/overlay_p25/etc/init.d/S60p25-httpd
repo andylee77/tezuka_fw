@@ -44,7 +44,7 @@ case "$1" in
             "exec /usr/bin/p25-httpd \
                 --listen 0.0.0.0:8080 \
                 --rx-lo 858100000 \
-                --sample-rate 8000000 \
+                --preset 8M \
                 --control-freq 860962500 \
                 --lo-ppm -0.54 \
                 $SSL_ARGS \
