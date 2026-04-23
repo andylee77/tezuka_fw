@@ -56,26 +56,11 @@
 		#size-cells = <1>;
 		ranges;
 
-		/* Control channel dibit ring DMA: 8 x 4KB = 32 KB at 0x17000000
-		   Must match FPGA config (p25_hdl/config.py dibit_dma_*) */
-		p25_dibit_dma: p25-dibit-dma@17000000 {
-			no-map;
-			reg = <0x17000000 0x8000>;
-			label = "p25_dibit_dma";
-		};
-
-		/* Traffic channel dibit ring DMA: 8 x 4KB = 32 KB at 0x18000000
-		   Must match FPGA config (p25_hdl/config.py traffic_dma_*) */
-		p25_traffic_dma: p25-traffic-dma@18000000 {
-			no-map;
-			reg = <0x18000000 0x8000>;
-			label = "p25_traffic_dma";
-		};
-
 		/* Phase 6C/6D: post-DDC IQ ring DMA, 8 x 32 KB = 256 KB at
 		   0x19000000. Carries 62.5 kSPS interleaved 16-bit signed I/Q
-		   (~128 ms per sub-buffer, ~1 s of audio in flight). Must
-		   match FPGA config (p25_hdl/config.py iq_dma_*). */
+		   (~128 ms per sub-buffer, ~1 s of audio in flight). Feeds
+		   /api/spectrum (narrowband, control). Must match FPGA config
+		   (p25_hdl/config.py iq_dma_*). */
 		p25_iq_dma: p25-iq-dma@19000000 {
 			no-map;
 			reg = <0x19000000 0x40000>;
@@ -83,10 +68,9 @@
 		};
 
 		/* Phase 6E.9/6E.10: HDL LSM control-channel dibit ring DMA,
-		   8 x 4 KB = 32 KB at 0x1a000000. Parallel to p25_dibit_dma
-		   (the C4FM dibit ring) so the PS can A/B both demods on one
-		   RF capture. Geometry mirrors p25_dibit_dma exactly. Must
-		   match FPGA config (p25_hdl/config.py lsm_dibit_dma_*). */
+		   8 x 4 KB = 32 KB at 0x1a000000. Geometry matches the
+		   traffic twin exactly. Must match FPGA config
+		   (p25_hdl/config.py lsm_dibit_dma_*). */
 		p25_lsm_dibit_dma: p25-lsm-dibit-dma@1a000000 {
 			no-map;
 			reg = <0x1a000000 0x8000>;
@@ -94,13 +78,10 @@
 		};
 
 		/* Phase 7A.2: HDL LSM traffic-channel dibit ring DMA,
-		   8 x 4 KB = 32 KB at 0x1b000000. Parallel to p25_traffic_dma
-		   (the C4FM traffic dibit ring) so the PS can A/B both
-		   modulations on a followed voice channel and dispatch
-		   HDU/TDU/LDU events from the new traffic_lsm register
-		   bank (0x7c4600c0). Geometry mirrors p25_lsm_dibit_dma
-		   exactly. Must match FPGA config
-		   (p25_hdl/config.py traffic_lsm_dibit_dma_*). */
+		   8 x 4 KB = 32 KB at 0x1b000000. Feeds
+		   ControlChannelDecoder for HDU/TDU/LDU dispatch on followed
+		   voice channels. Must match p25_hdl/config.py
+		   traffic_lsm_dibit_dma_*. */
 		p25_traffic_lsm_dibit_dma: p25-traffic-lsm-dibit-dma@1b000000 {
 			no-map;
 			reg = <0x1b000000 0x8000>;
@@ -109,58 +90,37 @@
 
 		/* 2026-04-16: traffic-channel post-DDC IQ ring DMA, 8 x 32 KB
 		   = 256 KB at 0x1c000000. Mirror of p25_iq_dma on the
-		   traffic chain; feeds the dashboard constellation scatter
-		   and offline traffic-LSM software cross-check. Geometry
-		   matches p25_iq_dma exactly. Must match FPGA config
-		   (p25_hdl/config.py traffic_iq_dma_*). */
+		   traffic chain; feeds /api/spectrum?chain=traffic. Must
+		   match p25_hdl/config.py traffic_iq_dma_*. */
 		p25_traffic_iq_dma: p25-traffic-iq-dma@1c000000 {
 			no-map;
 			reg = <0x1c000000 0x40000>;
 			label = "p25_traffic_iq_dma";
 		};
 
-		/* Phase 10.6 2026-04-18: control-chain post-LSM
-		   matched-filter IQ ring DMA. 8 x 32 KB = 256 KB at
-		   0x1d000000. Tapped from lsm_rrc.re_out / im_out inside
-		   the FPGA LSM chain (after LsmDecimator2 /2 + LPF +
-		   105-tap RRC matched filter). 31.25 kSPS (half of post-
-		   DDC). Feeds the dashboard eye-plot card via the
-		   /ws/iq?source=post_lsm endpoint in p25-httpd. Must match
-		   FPGA config (p25_hdl/config.py lsm_iq_dma_*). */
-		p25_lsm_iq_dma: p25-lsm-iq-dma@1d000000 {
-			no-map;
-			reg = <0x1d000000 0x40000>;
-			label = "p25_lsm_iq_dma";
-		};
-
-		/* Phase 10.6 2026-04-18: traffic-chain post-LSM matched-
-		   filter IQ ring DMA. Same 256 KB geometry, tapped from
-		   traffic_lsm_rrc.re_out / im_out. Must match FPGA config
-		   (p25_hdl/config.py traffic_lsm_iq_dma_*). */
-		p25_traffic_lsm_iq_dma: p25-traffic-lsm-iq-dma@1e000000 {
-			no-map;
-			reg = <0x1e000000 0x40000>;
-			label = "p25_traffic_lsm_iq_dma";
-		};
-
-		/* Phase 10.7 2026-04-22: control-chain post-PLL IQ ring
-		   DMA. Tapped from inside LsmDemod after LsmPllRotate --
-		   samples are already carrier-derotated + AGC-scaled.
-		   9.6 kSPS (2 samples/symbol, mid+sym interleave). Feeds
-		   the Plots-tab eye + constellation + /api/deviation.
-		   Must match p25_hdl/config.py post_pll_iq_dma_*. */
-		p25_post_pll_iq_dma: p25-post-pll-iq-dma@1f000000 {
+		/* Phase 10.8 2026-04-23: control-chain pre-diff post-PLL IQ
+		   ring DMA. Tapped from inside LsmDemod BEFORE the
+		   differential demodulator — samples are AGC-scaled and
+		   PLL-derotated but not yet put through z[n]*conj(z[n-1]).
+		   Phase noise is ~sqrt(2)x smaller than the old post-diff
+		   tap, so the eye / constellation / deviation / distribution
+		   plots render with sharp rails matching OP25 Datascope.
+		   9.6 kSPS (2 samples/symbol, mid+sym interleave). Must
+		   match p25_hdl/config.py pre_diff_iq_dma_*.
+		   SUPERSEDES the retired post_pll_iq_dma ring. */
+		p25_pre_diff_iq_dma: p25-pre-diff-iq-dma@1f000000 {
 			no-map;
 			reg = <0x1f000000 0x40000>;
-			label = "p25_post_pll_iq_dma";
+			label = "p25_pre_diff_iq_dma";
 		};
 
-		/* Phase 10.7 2026-04-22: traffic-chain post-PLL IQ ring.
-		   Traffic-side twin of p25_post_pll_iq_dma. */
-		p25_traffic_post_pll_iq_dma: p25-traffic-post-pll-iq-dma@20000000 {
+		/* Phase 10.8 2026-04-23: traffic-chain pre-diff post-PLL IQ
+		   ring. Traffic-side twin of p25_pre_diff_iq_dma.
+		   SUPERSEDES traffic_post_pll_iq_dma. */
+		p25_traffic_pre_diff_iq_dma: p25-traffic-pre-diff-iq-dma@20000000 {
 			no-map;
 			reg = <0x20000000 0x40000>;
-			label = "p25_traffic_post_pll_iq_dma";
+			label = "p25_traffic_pre_diff_iq_dma";
 		};
 
 		/* Phase 10.7 2026-04-22: wideband spectrometer DMA.
@@ -174,87 +134,63 @@
 			reg = <0x21000000 0x20000>;
 			label = "p25_wideband_spec_dma";
 		};
+
+		/* Phase 10.8 retirements — the following carve-outs were
+		   retired in the 2026-04-23 HDL refactor and their address
+		   ranges are free:
+		     0x1700_0000 p25_dibit_dma              (C4FM control dibits)
+		     0x1800_0000 p25_traffic_dma            (C4FM traffic dibits)
+		     0x1D00_0000 p25_lsm_iq_dma             (Phase 10.6 post-RRC eye)
+		     0x1E00_0000 p25_traffic_lsm_iq_dma     (Phase 10.6 traffic twin)
+		   The Phase 10.7 post-diff tap was repurposed for pre-diff
+		   in-place at 0x1F00_0000 / 0x2000_0000 (same addresses,
+		   new source signals). */
 	};
 
 	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
-	p25-dibit {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_dibit_dma>;
-		buffer-size = <0x1000>;
-	};
 
-	p25-traffic {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_traffic_dma>;
-		buffer-size = <0x1000>;
-	};
-
+	/* Narrowband post-DDC IQ (control). Feeds /api/spectrum?chain=control. */
 	p25-iq {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_iq_dma>;
 		buffer-size = <0x8000>;
 	};
 
+	/* LSM control-channel dibit stream — the decoder's primary input. */
 	p25-lsm-dibit {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_lsm_dibit_dma>;
 		buffer-size = <0x1000>;
 	};
 
-	/* Phase 7A.2: traffic-channel LSM dibit ring -- exposes the
-	   p25_traffic_lsm_dibit_dma carve-out as the "p25-traffic-lsm-dibit"
-	   UIO device that p25-httpd opens via
-	   `RxBuffer::new("p25-traffic-lsm-dibit")` in fpga.rs::take(). */
+	/* LSM traffic-channel dibit stream — voice-chain primary input. */
 	p25-traffic-lsm-dibit {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_traffic_lsm_dibit_dma>;
 		buffer-size = <0x1000>;
 	};
 
-	/* 2026-04-16 chain-symmetry fix: traffic-channel post-DDC IQ
-	   ring -- exposes the p25_traffic_iq_dma carve-out as the
-	   "p25-traffic-iq" UIO device that p25-httpd opens via
-	   `RxBuffer::new("p25-traffic-iq")` in fpga.rs::take(). */
+	/* Narrowband post-DDC IQ (traffic). Feeds /api/spectrum?chain=traffic. */
 	p25-traffic-iq {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_traffic_iq_dma>;
 		buffer-size = <0x8000>;
 	};
 
-	/* Phase 10.6 2026-04-18: control-chain post-LSM matched-filter
-	   IQ ring -- exposes the p25_lsm_iq_dma carve-out as the
-	   "p25-lsm-iq" UIO device that p25-httpd opens via
-	   `RxBuffer::new("p25-lsm-iq")` in fpga.rs::take(). Drives the
-	   dashboard matched-filter eye plot. */
-	p25-lsm-iq {
+	/* Phase 10.8: control-chain pre-diff post-PLL IQ. Feeds
+	   /ws/iq?source=pre_diff, /api/deviation, /api/distribution
+	   and the Plots-tab eye + constellation renderers. Opened by
+	   RxBuffer::new("p25-pre-diff-iq") in fpga.rs::take(). */
+	p25-pre-diff-iq {
 		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_lsm_iq_dma>;
+		memory-region = <&p25_pre_diff_iq_dma>;
 		buffer-size = <0x8000>;
 	};
 
-	/* Phase 10.6 2026-04-18: traffic-chain post-LSM matched-filter
-	   IQ ring. Same semantics, traffic-side. p25-httpd opens via
-	   `RxBuffer::new("p25-traffic-lsm-iq")`. */
-	p25-traffic-lsm-iq {
+	/* Phase 10.8: traffic-side twin of p25-pre-diff-iq. */
+	p25-traffic-pre-diff-iq {
 		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_traffic_lsm_iq_dma>;
-		buffer-size = <0x8000>;
-	};
-
-	/* Phase 10.7 2026-04-22: control-chain post-PLL IQ ring.
-	   p25-httpd opens via `RxBuffer::new("p25-post-pll-iq")`.
-	   Buffer size matches the 32 KB sub-buffer geometry in the
-	   HDL DmaStreamRingWrite. */
-	p25-post-pll-iq {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_post_pll_iq_dma>;
-		buffer-size = <0x8000>;
-	};
-
-	/* Phase 10.7: traffic-side twin of p25-post-pll-iq. */
-	p25-traffic-post-pll-iq {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_traffic_post_pll_iq_dma>;
+		memory-region = <&p25_traffic_pre_diff_iq_dma>;
 		buffer-size = <0x8000>;
 	};
 
