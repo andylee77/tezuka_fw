@@ -123,15 +123,17 @@
 			label = "p25_traffic_pre_diff_iq_dma";
 		};
 
-		/* Phase 10.7 2026-04-22: wideband spectrometer DMA.
-		   Pre-DDC 4096-bin FFT output from the maia_hdl.Spectrometer
-		   sub-module instantiated inside p25_core. 4 x 32 KB sub-
-		   buffers = 128 KB total. 5-10 Hz integration cadence (HW-
-		   controlled via spec_num_integrations). Feeds
-		   /api/spectrum_wide; no PS FFT. */
+		/* Wideband spectrometer DMA.
+		   Pre-DDC FFT output from the maia_hdl.Spectrometer sub-
+		   module instantiated inside p25_core.
+		   2026-04-23: bumped fft_order_log2 12 -> 14 (4096 -> 16384
+		   bins). At order 14 each buffer is 16384 * 8 = 128 KB.
+		   Ring cut from 4 -> 2 buffers to keep BRAM budget
+		   manageable on Z7020. Total DMA carveout = 2 x 128 KB
+		   = 256 KB = 0x40000. Was 0x20000 (4 x 32 KB). */
 		p25_wideband_spec_dma: p25-wideband-spec-dma@21000000 {
 			no-map;
-			reg = <0x21000000 0x20000>;
+			reg = <0x21000000 0x40000>;
 			label = "p25_wideband_spec_dma";
 		};
 
@@ -194,12 +196,14 @@
 		buffer-size = <0x8000>;
 	};
 
-	/* Phase 10.7: wideband spectrometer output. BRAM-backed DMA,
-	   one complete 4096-bin spectrum per 32 KB sub-buffer. */
+	/* Wideband spectrometer output. BRAM-backed DMA.
+	   2026-04-23: order 12 -> 14 (4096 -> 16384 bins). One
+	   complete spectrum per 128 KB sub-buffer; ring has 2
+	   sub-buffers = 256 KB total (see carveout above). */
 	p25-wideband-spec {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_wideband_spec_dma>;
-		buffer-size = <0x8000>;
+		buffer-size = <0x20000>;
 	};
 };
 
