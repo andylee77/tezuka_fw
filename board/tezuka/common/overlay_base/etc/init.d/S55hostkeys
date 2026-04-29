@@ -4,10 +4,29 @@
 case "$1" in
 	start|"")
 		echo -n "Starting host keys backup: "
-		# Save  Dropbear keys
-		[[ ! -f /mnt/jffs2/dropbear_ed25519_host_key ]] && [[ -f /etc/dropbear/dropbear_ed25519_host_key ]] && [[ -d /mnt/jffs2 ]] && cp /etc/dropbear/dropbear_ed25519_host_key /mnt/jffs2/dropbear_ed25519_host_key
+		# Save Dropbear host key + authorized_keys to the same path
+		# S21misc reads from on the next boot. Pre-2026-04-29 these
+		# wrote to /mnt/jffs2/<filename> (wrong path) while S21misc
+		# read from /mnt/jffs2/etc/dropbear/<filename>, so the
+		# backup never met the restore and dropbear regenerated
+		# host keys every boot.
+		#
+		# Also: Buildroot's stock S50dropbear init does NOT
+		# pre-generate a host key — dropbear generates it lazily on
+		# first SSH connection (the `-R` flag). That meant /etc/dropbear
+		# was empty at S55 time and the backup silently no-op'd. We
+		# now call `dropbearkey` ourselves to ensure the key exists
+		# before backing it up. Idempotent: if the key already exists
+		# (S21misc restored it from jffs2), dropbearkey would clobber
+		# it, so guard with `[ -f ]`.
+		[[ -d /mnt/jffs2 ]] && mkdir -p /mnt/jffs2/etc/dropbear
+		[ -d /etc/dropbear ] || mkdir -p /etc/dropbear
+		if [ ! -f /etc/dropbear/dropbear_ed25519_host_key ]; then
+			dropbearkey -t ed25519 -f /etc/dropbear/dropbear_ed25519_host_key >/dev/null 2>&1
+		fi
+		[[ ! -f /mnt/jffs2/etc/dropbear/dropbear_ed25519_host_key ]] && [[ -f /etc/dropbear/dropbear_ed25519_host_key ]] && [[ -d /mnt/jffs2/etc/dropbear ]] && cp /etc/dropbear/dropbear_ed25519_host_key /mnt/jffs2/etc/dropbear/dropbear_ed25519_host_key
 		# Save ssh authorized keys
-		[[ ! -f /mnt/jffs2/authorized_keys ]] && [[ -f /root/.ssh/authorized_keys ]] && [[ -d /mnt/jffs2 ]] && cp /root/.ssh/authorized_keys /mnt/jffs2/authorized_keys
+		[[ ! -f /mnt/jffs2/etc/dropbear/authorized_keys ]] && [[ -f /root/.ssh/authorized_keys ]] && [[ -d /mnt/jffs2/etc/dropbear ]] && cp /root/.ssh/authorized_keys /mnt/jffs2/etc/dropbear/authorized_keys
 		;;
 	stop)
 		
