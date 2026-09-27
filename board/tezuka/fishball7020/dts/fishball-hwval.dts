@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Fishball hwval hardware-validation image
+ * Based on Fishball Z7020 (Zynq-7020 + AD9361)
+ *
+ * Same hardware and AD9361/DDS/IIO nodes as fishball-p25.dts, for the
+ * hwval validation bitstream (hwval-core UIO + hwval DDR windows; see
+ * fishball-hwval.dtsi and maia-sdr doc/HW_VALIDATION_SUITE.md 6.1/6.2).
+ */
+/dts-v1/;
+#include "fishball-hwval.dtsi"
+
+
+&adc0_ad9364 {
+	// LVDS 1R1T: matches axi_ad9361 CONFIG.MODE_1R1T=1 in the HDL bitstream.
+	// RX2 is not antenna-connected on Fishball and 2R2T wasted half the LVDS
+	// bus slots. `adi,2rx-2tx-mode-enable` deliberately NOT set here.
+};
+
+&cf_ad9364_dac_core_0 {
+	/* This property is controlled by u-boot environment. */
+	compatible = "adi,axi-ad9361-dds-6.00.a";
+};
+
+/ {
+	leds {
+		compatible = "gpio-leds";
+		led0 {
+			label = "led0:green";
+			gpios = <&gpio0 0 0>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		autorepeat;
+	};
+};
