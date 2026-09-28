@@ -88,6 +88,18 @@
 			label = "p25_traffic_lsm_dibit_dma";
 		};
 
+		/* P25 core 0.3.0 (maia-sdr doc/changes/064): second traffic
+		   decode chain's LSM dibit ring DMA, 8 x 4 KB = 32 KB at
+		   0x1d000000 (the retired Phase 10.6 p25_lsm_iq_dma range).
+		   Same geometry as p25_traffic_lsm_dibit_dma. Must match
+		   p25_hdl/config.py traffic2_lsm_dibit_dma_*. Harmless on a
+		   0.2.0 bitstream (nothing writes it). */
+		p25_traffic2_lsm_dibit_dma: p25-traffic2-lsm-dibit-dma@1d000000 {
+			no-map;
+			reg = <0x1d000000 0x8000>;
+			label = "p25_traffic2_lsm_dibit_dma";
+		};
+
 		/* 2026-04-16: traffic-channel post-DDC IQ ring DMA, 8 x 32 KB
 		   = 256 KB at 0x1c000000. Mirror of p25_iq_dma on the
 		   traffic chain; feeds /api/spectrum?chain=traffic. Must
@@ -126,15 +138,29 @@
 		/* Wideband spectrometer DMA.
 		   Pre-DDC FFT output from the maia_hdl.Spectrometer sub-
 		   module instantiated inside p25_core.
-		   2026-04-23: bumped fft_order_log2 12 -> 14 (4096 -> 16384
-		   bins). At order 14 each buffer is 16384 * 8 = 128 KB.
-		   Ring cut from 4 -> 2 buffers to keep BRAM budget
-		   manageable on Z7020. Total DMA carveout = 2 x 128 KB
-		   = 256 KB = 0x40000. Was 0x20000 (4 x 32 KB). */
+		   fft_order_log2 = 12 (4096 bins). Field-tested 14 was
+		   significantly slower with no operationally useful extra
+		   information vs 12, so 4096 is the steady-state geometry
+		   regardless of BRAM availability post the 2026-05-03 dual-
+		   DDC pivot. Each spectrum is 4096 × 8 = 32 KB; ring has 2
+		   sub-buffers = 64 KB total. ~1.95 kHz/bin at 8 MSPS. */
 		p25_wideband_spec_dma: p25-wideband-spec-dma@21000000 {
 			no-map;
-			reg = <0x21000000 0x40000>;
+			reg = <0x21000000 0x10000>;
 			label = "p25_wideband_spec_dma";
+		};
+
+		/* 2026-05-03: pre-DDC raw 8 MSPS IQ ring DMA. Fed straight
+		   from rxiq_cdc (12-bit signed I/Q sign-extended to 16-bit,
+		   2 samples per 64-bit DMA word — same packing as
+		   p25_iq_dma). Backs the PS-side software P25 stack.
+		   Geometry: 16 sub-buffers x 1 MB = 16 MB at 0x22000000.
+		   ~31 ms per sub-buffer at 32 MB/s, ~0.5 s ring depth.
+		   Must match p25_hdl/config.py wideband_iq_dma_*. */
+		p25_wideband_iq_dma: p25-wideband-iq-dma@22000000 {
+			no-map;
+			reg = <0x22000000 0x1000000>;
+			label = "p25_wideband_iq_dma";
 		};
 
 		/* Phase 10.8 retirements — the following carve-outs were
@@ -146,7 +172,9 @@
 		     0x1E00_0000 p25_traffic_lsm_iq_dma     (Phase 10.6 traffic twin)
 		   The Phase 10.7 post-diff tap was repurposed for pre-diff
 		   in-place at 0x1F00_0000 / 0x2000_0000 (same addresses,
-		   new source signals). */
+		   new source signals).
+		   P25 core 0.3.0: 0x1D00_0000 is in use again, by
+		   p25_traffic2_lsm_dibit_dma (32 KB). */
 	};
 
 	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
@@ -169,6 +197,14 @@
 	p25-traffic-lsm-dibit {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_traffic_lsm_dibit_dma>;
+		buffer-size = <0x1000>;
+	};
+
+	/* P25 core 0.3.0: second traffic chain's LSM dibit stream
+	   (second simultaneous voice call). */
+	p25-traffic2-lsm-dibit {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_traffic2_lsm_dibit_dma>;
 		buffer-size = <0x1000>;
 	};
 
@@ -197,13 +233,23 @@
 	};
 
 	/* Wideband spectrometer output. BRAM-backed DMA.
-	   2026-04-23: order 12 -> 14 (4096 -> 16384 bins). One
-	   complete spectrum per 128 KB sub-buffer; ring has 2
-	   sub-buffers = 256 KB total (see carveout above). */
+	   fft_order_log2 = 12 (4096 bins). See the carveout above for
+	   why 12 is the steady-state geometry. One complete spectrum
+	   per 32 KB sub-buffer; ring has 2 sub-buffers = 64 KB total. */
 	p25-wideband-spec {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_wideband_spec_dma>;
-		buffer-size = <0x20000>;
+		buffer-size = <0x8000>;
+	};
+
+	/* 2026-05-03: pre-DDC raw 8 MSPS IQ ring DMA. Tap straight
+	   off `rxiq_cdc` for diagnostics / offline analysis (e.g.
+	   capture .cs16 of full RF window for SDRTrunk reference
+	   comparison). 16 sub-buffers x 1 MB. */
+	p25-wideband-iq {
+		compatible = "maia-sdr,rxbuffer";
+		memory-region = <&p25_wideband_iq_dma>;
+		buffer-size = <0x100000>;
 	};
 };
 
