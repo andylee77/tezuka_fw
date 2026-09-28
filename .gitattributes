@@ -1,1 +1,3 @@
 *.sh text eol=lf
+# Init scripts have no .sh extension; CRLF breaks them on the board.
+board/**/init.d/* text eol=lf
