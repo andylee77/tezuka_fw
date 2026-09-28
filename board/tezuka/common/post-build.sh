@@ -6,9 +6,10 @@ BOARD_DIR=$(dirname ${0})
 grep -q mtd2 ${TARGET_DIR}/etc/fstab || echo "mtd2 /mnt/jffs2 jffs2 rw,noatime 0 0" >> ${TARGET_DIR}/etc/fstab
 
 # Prepare LICENSE.html
-if [ ! -e ${BINARIES_DIR}/msd ]; then
-	mkdir ${BINARIES_DIR}/msd
-fi
+# 2026-05-03: switched to `mkdir -p` because the previous
+# `if [ ! -e ]` guard didn't survive a cancelled-build leftover —
+# rebuild then failed at this mkdir with "File exists".
+mkdir -p ${BINARIES_DIR}/msd
 
 cp ${BOARD_DIR}/LICENSE.template ${BINARIES_DIR}/msd/LICENSE.html
 cp -r ${BOARD_DIR}/msd/* ${BINARIES_DIR}/msd/

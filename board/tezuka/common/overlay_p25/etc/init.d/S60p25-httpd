@@ -5,13 +5,16 @@
 # Note on stdout/stderr: start-stop-daemon -b detaches the process from the
 # controlling terminal and busybox closes its standard streams, so any
 # tracing::info!/warn!/error! calls in the binary disappear into /dev/null.
-# We work around that by exec'ing the binary inside a sh -c that redirects
-# stdout+stderr to /var/log/p25-httpd.log. Using exec means the recorded
-# pid (via -m) is the p25-httpd process itself, not the wrapper sh -- so
-# stop/restart work normally.
+# We work around that by running the binary inside a sh -c that redirects
+# stdout+stderr to /var/log/p25-httpd.log.
 #
 # The previous log is rotated to .prev on each start so a crash leaves a
 # diagnostic trail across reboots.
+#
+# 2026-09-28 (p25-httpd change 071a): the binary runs under a respawn loop.
+# p25-httpd exits on any panic (its state is suspect afterwards) and the
+# loop restarts it after 3 s; each exit is logged to $LOG. The recorded pid
+# is the loop shell: stop sends it TERM and its trap stops p25-httpd.
 
 LOG=/var/log/p25-httpd.log
 PIDF=/var/run/p25-httpd.pid
@@ -39,16 +42,25 @@ case "$1" in
                 SSL_ARGS="$SSL_ARGS --ca-cert /mnt/jffs2/p25-sdr-ca.crt"
             fi
         fi
+        # The control channel, LO and preset below are only the fallback:
+        # p25-httpd tunes to the active site's plan (change 070).
         start-stop-daemon -S -b -q -m -p "$PIDF" \
             -x /bin/sh -- -c \
-            "exec /usr/bin/p25-httpd \
-                --listen 0.0.0.0:8080 \
-                --rx-lo 858100000 \
-                --preset 8M \
-                --control-freq 860962500 \
-                --lo-ppm 0 \
-                $SSL_ARGS \
-                >> $LOG 2>&1"
+            "trap 'kill \$child 2>/dev/null; wait \$child; exit 0' TERM INT
+             while :; do
+                /usr/bin/p25-httpd \
+                    --listen 0.0.0.0:8080 \
+                    --rx-lo 858100000 \
+                    --preset 8M \
+                    --control-freq 860962500 \
+                    --lo-ppm 0 \
+                    $SSL_ARGS \
+                    >> $LOG 2>&1 &
+                child=\$!
+                wait \$child
+                echo \"p25-httpd exited (\$?), restarting in 3 s\" >> $LOG
+                sleep 3
+             done"
         cd - > /dev/null
 	[ $? = 0 ] && echo "OK ($LOG)" || echo "FAIL"
 	;;
