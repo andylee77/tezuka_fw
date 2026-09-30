@@ -26,6 +26,13 @@ case "$1" in
             xz -d /usr/bin/p25-httpd.xz
             chmod +x /usr/bin/p25-httpd
         fi
+        # The activity history and the recordings live on the SD card,
+        # which S91nfs-mount would mount only after this script: mount it
+        # now (p25-httpd also waits up to 20 s for it).
+        if [ -e /dev/mmcblk0p1 ] && ! grep -q " /mnt/sd " /proc/mounts; then
+            mkdir -p /mnt/sd
+            mount /dev/mmcblk0p1 /mnt/sd && echo -n "(SD card mounted) "
+        fi
         mkdir -p /var/log
         [ -f "$LOG" ] && mv "$LOG" "${LOG}.prev"
         cd /root
