@@ -48,4 +48,8 @@ define P25_HTTPD_INSTALL_TARGET_CMDS
 		$(TARGET_DIR)/usr/bin/
 endef
 
+define P25_HTTPD_INSTALL_INIT_SYSV
+	$(INSTALL) -D -m 0755 $(P25_HTTPD_PKGDIR)/S60p25-httpd $(TARGET_DIR)/etc/init.d/S60p25-httpd
+endef
+
 $(eval $(generic-package))

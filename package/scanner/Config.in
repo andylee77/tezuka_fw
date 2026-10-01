@@ -1,0 +1,11 @@
+config BR2_PACKAGE_SCANNER
+	bool "scanner"
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_RUSTC
+	# S50p25-httpd-certificates makes the HTTPS certificates with the openssl binary on first
+	# boot; the scanner's TLS (rustls) does not need it.
+	select BR2_PACKAGE_OPENSSL
+	select BR2_PACKAGE_LIBOPENSSL_BIN
+	help
+	  The Fishball scanner: P25 and DMR trunking on the Zynq PS, with the web UI and the API
+	  (maia-sdr scanner/).

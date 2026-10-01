@@ -134,7 +134,7 @@ if [ -n "$FPGA_PKG" ] && [ -f "$FPGA_XSA" ]; then
     fi
 fi
 
-# Force-rebuild p25-httpd or maia-httpd if the maia-sdr source is newer.
+# Force-rebuild p25-httpd, the scanner or maia-httpd if the maia-sdr source is newer.
 # The maia-sdr repo is mounted read-only at /mnt/maia-sdr; Buildroot
 # rsyncs it into the build dir. Detect if source changed since last build.
 MAIA_SRC="/mnt/maia-sdr"
@@ -147,6 +147,19 @@ if [ -d "$MAIA_SRC/p25-httpd" ]; then
             make p25-httpd-dirclean 2>/dev/null || true
         else
             log "  p25-httpd is up to date."
+        fi
+    fi
+fi
+if [ -d "$MAIA_SRC/scanner" ]; then
+    SCANNER_STAMP=$(find output/build/ -maxdepth 2 -name '.stamp_rsynced' -path '*/scanner-*/*' 2>/dev/null | head -1 || true)
+    if [ -n "$SCANNER_STAMP" ]; then
+        # Its sources, the UI it embeds, and the register PAC it builds against.
+        NEWER=$(find "$MAIA_SRC/scanner/src" "$MAIA_SRC/scanner/Cargo.toml" "$MAIA_SRC/scanner/Cargo.lock" "$MAIA_SRC/p25-httpd/p25-pac" \( -name '*.rs' -o -name '*.toml' -o -name '*.lock' -o -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.svd' \) -newer "$SCANNER_STAMP" 2>/dev/null | head -1 || true)
+        if [ -n "$NEWER" ]; then
+            log "  scanner source changed ($(basename "$NEWER")) -- forcing rebuild..."
+            make scanner-dirclean 2>/dev/null || true
+        else
+            log "  scanner is up to date."
         fi
     fi
 fi

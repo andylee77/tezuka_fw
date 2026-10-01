@@ -1,0 +1,74 @@
+#!/bin/sh
+#
+# The Fishball scanner (maia-sdr scanner/): P25 and DMR trunking, the web UI and the API.
+#
+# start-stop-daemon -b closes the standard streams, so the binary runs inside a sh -c that
+# appends them to /var/log/scanner.log; the previous log is kept as .prev. The scanner exits on
+# a panic and the loop restarts it after 3 s; the recorded pid is the loop shell, whose trap
+# stops the scanner on stop.
+
+LOG=/var/log/scanner.log
+PIDF=/var/run/scanner.pid
+
+case "$1" in
+  start)
+	echo -n "Starting scanner: "
+	if [ -f /usr/bin/scanner.xz ]; then
+		xz -d /usr/bin/scanner.xz
+		chmod +x /usr/bin/scanner
+	fi
+	# The history and the recordings live on the SD card, which S91nfs-mount would mount only
+	# after this script: repair its FAT (power cuts leave it dirty, and a damaged FAT turns the
+	# card read-only mid-write), then mount it now.
+	mkdir -p /var/log
+	if [ -e /dev/mmcblk0p1 ] && ! grep -q " /mnt/sd " /proc/mounts; then
+		mkdir -p /mnt/sd
+		if command -v fsck.fat > /dev/null; then
+			echo "== $(date) fsck.fat -a" >> /var/log/fsck-sd.log
+			fsck.fat -a -w /dev/mmcblk0p1 >> /var/log/fsck-sd.log 2>&1
+		fi
+		mount /dev/mmcblk0p1 /mnt/sd && echo -n "(SD card mounted) "
+	fi
+	[ -f "$LOG" ] && mv "$LOG" "${LOG}.prev"
+	cd /root
+	# The certificates S50p25-httpd-certificates makes; without them the scanner serves HTTP only.
+	SSL_ARGS=""
+	if [ -f /mnt/jffs2/p25-httpd.crt ] && [ -f /mnt/jffs2/p25-httpd.key ]; then
+		SSL_ARGS="--ssl-cert /mnt/jffs2/p25-httpd.crt --ssl-key /mnt/jffs2/p25-httpd.key --listen-https 0.0.0.0:8443"
+		if [ -f /mnt/jffs2/p25-sdr-ca.crt ]; then
+			SSL_ARGS="$SSL_ARGS --ca-cert /mnt/jffs2/p25-sdr-ca.crt"
+		fi
+	fi
+	start-stop-daemon -S -b -q -m -p "$PIDF" \
+		-x /bin/sh -- -c \
+		"trap 'kill \$child 2>/dev/null; wait \$child; exit 0' TERM INT
+		 while :; do
+			/usr/bin/scanner --listen 0.0.0.0:8080 $SSL_ARGS >> $LOG 2>&1 &
+			child=\$!
+			wait \$child
+			echo \"scanner exited (\$?), restarting in 3 s\" >> $LOG
+			sleep 3
+		 done"
+	cd - > /dev/null
+	[ $? = 0 ] && echo "OK ($LOG)" || echo "FAIL"
+	;;
+  stop)
+	echo -n "Stopping scanner: "
+	start-stop-daemon -K -q -p "$PIDF" 2>/dev/null
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	# The scanner flushes its recordings and history on TERM (up to 10 s each); then leave the
+	# card clean. start mounts it again.
+	for i in $(seq 1 25); do pidof scanner > /dev/null || break; sleep 1; done
+	grep -q " /mnt/sd " /proc/mounts && sync && umount /mnt/sd 2>/dev/null
+	;;
+  restart|reload)
+	$0 stop
+	sleep 1
+	$0 start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
