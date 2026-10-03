@@ -134,6 +134,20 @@ if [ -n "$FPGA_PKG" ] && [ -f "$FPGA_XSA" ]; then
     fi
 fi
 
+# Rebuild the kernel package when a device tree changed: Buildroot copies the custom DTS files
+# into the kernel tree only when it builds the kernel, so a changed .dts(i) alone would leave the
+# old DTB in the image. The copies in the kernel tree are what the last build used.
+LINUX_BUILD_DIR=$(ls -d output/build/linux-*/ 2>/dev/null | grep -v -e linux-firmware -e linux-headers | head -1 || true)
+if [ -n "$LINUX_BUILD_DIR" ]; then
+    for dts in $(sed -n 's/^BR2_LINUX_KERNEL_CUSTOM_DTS_PATH="\(.*\)"/\1/p' .config | sed "s|\$(BR2_EXTERNAL_PLUTOSDR_PATH)|$BUILD_HOME|g"); do
+        if ! cmp -s "$dts" "$LINUX_BUILD_DIR/arch/arm/boot/dts/$(basename "$dts")"; then
+            log "  device tree $(basename "$dts") changed -- rebuilding the kernel package..."
+            make linux-rebuild
+            break
+        fi
+    done
+fi
+
 # Force-rebuild p25-httpd, the scanner or maia-httpd if the maia-sdr source is newer.
 # The maia-sdr repo is mounted read-only at /mnt/maia-sdr; Buildroot
 # rsyncs it into the build dir. Detect if source changed since last build.
@@ -154,7 +168,7 @@ if [ -d "$MAIA_SRC/scanner" ]; then
     SCANNER_STAMP=$(find output/build/ -maxdepth 2 -name '.stamp_rsynced' -path '*/scanner-*/*' 2>/dev/null | head -1 || true)
     if [ -n "$SCANNER_STAMP" ]; then
         # Its sources, the UI it embeds, and the register PAC it builds against.
-        NEWER=$(find "$MAIA_SRC/scanner/src" "$MAIA_SRC/scanner/Cargo.toml" "$MAIA_SRC/scanner/Cargo.lock" "$MAIA_SRC/p25-httpd/p25-pac" \( -name '*.rs' -o -name '*.toml' -o -name '*.lock' -o -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.svd' \) -newer "$SCANNER_STAMP" 2>/dev/null | head -1 || true)
+        NEWER=$(find "$MAIA_SRC/scanner/src" "$MAIA_SRC/scanner/Cargo.toml" "$MAIA_SRC/scanner/Cargo.lock" "$MAIA_SRC/scanner/core-pac" \( -name '*.rs' -o -name '*.toml' -o -name '*.lock' -o -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.svd' \) -newer "$SCANNER_STAMP" 2>/dev/null | head -1 || true)
         if [ -n "$NEWER" ]; then
             log "  scanner source changed ($(basename "$NEWER")) -- forcing rebuild..."
             make scanner-dirclean 2>/dev/null || true
