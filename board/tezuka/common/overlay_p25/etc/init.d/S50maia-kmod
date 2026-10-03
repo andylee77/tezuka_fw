@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Load the DMA ring driver (maia-kmod's rxbuffer, built by the P25 defconfig) for the radio
+# core's rings: /dev/p25-lanes, /dev/p25-wideband-spec, /dev/p25-wideband-iq.
+#
+case "$1" in
+  start)
+	echo -n "Loading maia-sdr.ko: "
+	modprobe maia_sdr
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	;;
+  stop|restart|reload)
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

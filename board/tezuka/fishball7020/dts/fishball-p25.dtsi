@@ -3,7 +3,7 @@
  *
  * Based on fishball.dtsi. Changes from Maia SDR variant:
  * - UIO device renamed from maia-sdr to p25-core
- * - Spectrometer/recording replaced with P25 dibit/traffic DMA buffers
+ * - Spectrometer/recording replaced with the radio core's rings (lanes, spectrum, capture)
  * - IIO DMA (rx_dma, tx_dma) and AD9361 IIO support kept intact
  *
  * Copyright (C) 2016 Analog Devices Inc.
@@ -56,196 +56,46 @@
 		#size-cells = <1>;
 		ranges;
 
-		/* Phase 6C/6D: post-DDC IQ ring DMA, 8 x 32 KB = 256 KB at
-		   0x19000000. Carries 62.5 kSPS interleaved 16-bit signed I/Q
-		   (~128 ms per sub-buffer, ~1 s of audio in flight). Feeds
-		   /api/spectrum (narrowband, control). Must match FPGA config
-		   (p25_hdl/config.py iq_dma_*). */
-		p25_iq_dma: p25-iq-dma@19000000 {
+		/* The radio core's lane ring (maia-sdr doc/changes/079): every lane's IQ in 4 KB tagged
+		   packets, 128 sub-buffers of 16 KB = 2 MB (3.4 s at three lanes of 50 kSPS). Must
+		   match maia-hdl p25_hdl/config.py lanes_dma_*. */
+		p25_lanes_dma: p25-lanes-dma@19000000 {
 			no-map;
-			reg = <0x19000000 0x40000>;
-			label = "p25_iq_dma";
+			reg = <0x19000000 0x200000>;
+			label = "p25_lanes_dma";
 		};
 
-		/* Phase 6E.9/6E.10: HDL LSM control-channel dibit ring DMA,
-		   8 x 4 KB = 32 KB at 0x1a000000. Geometry matches the
-		   traffic twin exactly. Must match FPGA config
-		   (p25_hdl/config.py lsm_dibit_dma_*). */
-		p25_lsm_dibit_dma: p25-lsm-dibit-dma@1a000000 {
-			no-map;
-			reg = <0x1a000000 0x8000>;
-			label = "p25_lsm_dibit_dma";
-		};
-
-		/* Phase 7A.2: HDL LSM traffic-channel dibit ring DMA,
-		   8 x 4 KB = 32 KB at 0x1b000000. Feeds
-		   ControlChannelDecoder for HDU/TDU/LDU dispatch on followed
-		   voice channels. Must match p25_hdl/config.py
-		   traffic_lsm_dibit_dma_*. */
-		p25_traffic_lsm_dibit_dma: p25-traffic-lsm-dibit-dma@1b000000 {
-			no-map;
-			reg = <0x1b000000 0x8000>;
-			label = "p25_traffic_lsm_dibit_dma";
-		};
-
-		/* P25 core 0.3.0 (maia-sdr doc/changes/064): second traffic
-		   decode chain's LSM dibit ring DMA, 8 x 4 KB = 32 KB at
-		   0x1d000000 (the retired Phase 10.6 p25_lsm_iq_dma range).
-		   Same geometry as p25_traffic_lsm_dibit_dma. Must match
-		   p25_hdl/config.py traffic2_lsm_dibit_dma_*. Harmless on a
-		   0.2.0 bitstream (nothing writes it). */
-		p25_traffic2_lsm_dibit_dma: p25-traffic2-lsm-dibit-dma@1d000000 {
-			no-map;
-			reg = <0x1d000000 0x8000>;
-			label = "p25_traffic2_lsm_dibit_dma";
-		};
-
-		/* 2026-04-16: traffic-channel post-DDC IQ ring DMA, 8 x 32 KB
-		   = 256 KB at 0x1c000000. Mirror of p25_iq_dma on the
-		   traffic chain; feeds /api/spectrum?chain=traffic. Must
-		   match p25_hdl/config.py traffic_iq_dma_*. */
-		p25_traffic_iq_dma: p25-traffic-iq-dma@1c000000 {
-			no-map;
-			reg = <0x1c000000 0x40000>;
-			label = "p25_traffic_iq_dma";
-		};
-
-		/* Phase 10.8 2026-04-23: control-chain pre-diff post-PLL IQ
-		   ring DMA. Tapped from inside LsmDemod BEFORE the
-		   differential demodulator — samples are AGC-scaled and
-		   PLL-derotated but not yet put through z[n]*conj(z[n-1]).
-		   Phase noise is ~sqrt(2)x smaller than the old post-diff
-		   tap, so the eye / constellation / deviation / distribution
-		   plots render with sharp rails matching OP25 Datascope.
-		   9.6 kSPS (2 samples/symbol, mid+sym interleave). Must
-		   match p25_hdl/config.py pre_diff_iq_dma_*.
-		   SUPERSEDES the retired post_pll_iq_dma ring. */
-		p25_pre_diff_iq_dma: p25-pre-diff-iq-dma@1f000000 {
-			no-map;
-			reg = <0x1f000000 0x40000>;
-			label = "p25_pre_diff_iq_dma";
-		};
-
-		/* Phase 10.8 2026-04-23: traffic-chain pre-diff post-PLL IQ
-		   ring. Traffic-side twin of p25_pre_diff_iq_dma.
-		   SUPERSEDES traffic_post_pll_iq_dma. */
-		p25_traffic_pre_diff_iq_dma: p25-traffic-pre-diff-iq-dma@20000000 {
-			no-map;
-			reg = <0x20000000 0x40000>;
-			label = "p25_traffic_pre_diff_iq_dma";
-		};
-
-		/* Wideband spectrometer DMA.
-		   Pre-DDC FFT output from the maia_hdl.Spectrometer sub-
-		   module instantiated inside p25_core.
-		   fft_order_log2 = 12 (4096 bins). Field-tested 14 was
-		   significantly slower with no operationally useful extra
-		   information vs 12, so 4096 is the steady-state geometry
-		   regardless of BRAM availability post the 2026-05-03 dual-
-		   DDC pivot. Each spectrum is 4096 × 8 = 32 KB; ring has 2
-		   sub-buffers = 64 KB total. ~1.95 kHz/bin at 8 MSPS. */
+		/* The wideband spectrometer: one 4096-bin integration (8 B a bin) per 32 KB
+		   sub-buffer, 2 sub-buffers. Must match wideband_spec_dma_*. */
 		p25_wideband_spec_dma: p25-wideband-spec-dma@21000000 {
 			no-map;
 			reg = <0x21000000 0x10000>;
 			label = "p25_wideband_spec_dma";
 		};
 
-		/* 2026-05-03: pre-DDC raw 8 MSPS IQ ring DMA. Fed straight
-		   from rxiq_cdc (12-bit signed I/Q sign-extended to 16-bit,
-		   2 samples per 64-bit DMA word — same packing as
-		   p25_iq_dma). Backs the PS-side software P25 stack.
-		   Geometry: 16 sub-buffers x 1 MB = 16 MB at 0x22000000.
-		   ~31 ms per sub-buffer at 32 MB/s, ~0.5 s ring depth.
-		   Must match p25_hdl/config.py wideband_iq_dma_*. */
+		/* The raw IQ capture: the AD9361's samples before any DDC, two a 64-bit word, 16 x 1 MB
+		   (0.5 s at 8 MSPS). Must match wideband_iq_dma_*. */
 		p25_wideband_iq_dma: p25-wideband-iq-dma@22000000 {
 			no-map;
 			reg = <0x22000000 0x1000000>;
 			label = "p25_wideband_iq_dma";
 		};
-
-		/* Phase 10.8 retirements — the following carve-outs were
-		   retired in the 2026-04-23 HDL refactor and their address
-		   ranges are free:
-		     0x1700_0000 p25_dibit_dma              (C4FM control dibits)
-		     0x1800_0000 p25_traffic_dma            (C4FM traffic dibits)
-		     0x1D00_0000 p25_lsm_iq_dma             (Phase 10.6 post-RRC eye)
-		     0x1E00_0000 p25_traffic_lsm_iq_dma     (Phase 10.6 traffic twin)
-		   The Phase 10.7 post-diff tap was repurposed for pre-diff
-		   in-place at 0x1F00_0000 / 0x2000_0000 (same addresses,
-		   new source signals).
-		   P25 core 0.3.0: 0x1D00_0000 is in use again, by
-		   p25_traffic2_lsm_dibit_dma (32 KB). */
 	};
 
-	/* P25 DMA buffer devices -- uses maia-kmod rxbuffer driver */
+	/* The radio core's DMA rings, through maia-kmod's rxbuffer driver. */
 
-	/* Narrowband post-DDC IQ (control). Feeds /api/spectrum?chain=control. */
-	p25-iq {
+	p25-lanes {
 		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_iq_dma>;
-		buffer-size = <0x8000>;
+		memory-region = <&p25_lanes_dma>;
+		buffer-size = <0x4000>;
 	};
 
-	/* LSM control-channel dibit stream — the decoder's primary input. */
-	p25-lsm-dibit {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_lsm_dibit_dma>;
-		buffer-size = <0x1000>;
-	};
-
-	/* LSM traffic-channel dibit stream — voice-chain primary input. */
-	p25-traffic-lsm-dibit {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_traffic_lsm_dibit_dma>;
-		buffer-size = <0x1000>;
-	};
-
-	/* P25 core 0.3.0: second traffic chain's LSM dibit stream
-	   (second simultaneous voice call). */
-	p25-traffic2-lsm-dibit {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_traffic2_lsm_dibit_dma>;
-		buffer-size = <0x1000>;
-	};
-
-	/* Narrowband post-DDC IQ (traffic). Feeds /api/spectrum?chain=traffic. */
-	p25-traffic-iq {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_traffic_iq_dma>;
-		buffer-size = <0x8000>;
-	};
-
-	/* Phase 10.8: control-chain pre-diff post-PLL IQ. Feeds
-	   /ws/iq?source=pre_diff, /api/deviation, /api/distribution
-	   and the Plots-tab eye + constellation renderers. Opened by
-	   RxBuffer::new("p25-pre-diff-iq") in fpga.rs::take(). */
-	p25-pre-diff-iq {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_pre_diff_iq_dma>;
-		buffer-size = <0x8000>;
-	};
-
-	/* Phase 10.8: traffic-side twin of p25-pre-diff-iq. */
-	p25-traffic-pre-diff-iq {
-		compatible = "maia-sdr,rxbuffer";
-		memory-region = <&p25_traffic_pre_diff_iq_dma>;
-		buffer-size = <0x8000>;
-	};
-
-	/* Wideband spectrometer output. BRAM-backed DMA.
-	   fft_order_log2 = 12 (4096 bins). See the carveout above for
-	   why 12 is the steady-state geometry. One complete spectrum
-	   per 32 KB sub-buffer; ring has 2 sub-buffers = 64 KB total. */
 	p25-wideband-spec {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_wideband_spec_dma>;
 		buffer-size = <0x8000>;
 	};
 
-	/* 2026-05-03: pre-DDC raw 8 MSPS IQ ring DMA. Tap straight
-	   off `rxiq_cdc` for diagnostics / offline analysis (e.g.
-	   capture .cs16 of full RF window for SDRTrunk reference
-	   comparison). 16 sub-buffers x 1 MB. */
 	p25-wideband-iq {
 		compatible = "maia-sdr,rxbuffer";
 		memory-region = <&p25_wideband_iq_dma>;
