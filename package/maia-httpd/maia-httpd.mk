@@ -4,7 +4,8 @@
 #
 ################################################################################
 
-MAIA_HTTPD_VERSION = fishball-dev
+# The fork's maia-httpd and maia-wasm are upstream's: the branch that tracks upstream.
+MAIA_HTTPD_VERSION = main
 MAIA_HTTPD_SITE = https://github.com/andylee77/maia-sdr.git
 MAIA_HTTPD_SITE_METHOD = git
 MAIA_HTTPD_DEPENDENCIES = host-openssl

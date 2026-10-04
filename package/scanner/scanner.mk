@@ -8,12 +8,11 @@ SCANNER_VERSION = v0.1.0
 SCANNER_SITE = /mnt/maia-sdr
 SCANNER_SITE_METHOD = local
 
-# Sync only scanner/ and the register PAC it builds against (p25-httpd/p25-pac), without the
-# cargo target dirs or the scanner's test fixtures: the whole maia-sdr checkout is several GB.
+# Sync only scanner/ (its register PAC is scanner/core-pac), without the cargo target dirs or the
+# scanner's test fixtures: the whole maia-sdr checkout is several GB.
 SCANNER_OVERRIDE_SRCDIR_RSYNC_EXCLUSIONS = \
 	--include=/scanner/ --exclude=/scanner/target/ --exclude=/scanner/tests/ \
-	--include=/p25-httpd/ --include=/p25-httpd/p25-pac/ --exclude=/p25-httpd/p25-pac/target/ \
-	--exclude=/p25-httpd/* --exclude=/*
+	--exclude=/*
 
 SCANNER_CROSS_COMPILE = arm-none-linux-gnueabihf-
 SCANNER_LINKER = "$(HOST_DIR)/bin/$(SCANNER_CROSS_COMPILE)gcc"

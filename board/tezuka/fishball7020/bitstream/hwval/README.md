@@ -14,7 +14,7 @@ cd C:/Users/Andy/Projects/MAIA_SDR/maia-sdr
 ```
 
 `build_fpga.bat --hwval` builds `maia-hdl/projects/fishball7020_hwval`
-(`hwval_core` from `maia-hdl/hwval_hdl/`) and copies
+(`hwval_core` from `scanner-hdl/hwval_hdl/`) and copies
 `fishball_hwval.sdk/system_top.xsa` here. It only ever produces a
 timing-clean XSA: for hwval a timing failure is a hard error and
 `system_top_bad_timing.xsa` is never promoted. The matching register map is

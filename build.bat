@@ -50,7 +50,7 @@ for %%L in (a b c d e f g h i j k l m n o p q r s t u v w x y z) do (
 )
 set "DOCKER_SRC=/%DRIVE_LOWER%%REST%"
 
-REM Maia SDR source mount (p25-httpd lives in maia-sdr repo on fishball-p25 branch)
+REM Maia SDR source mount (the scanner lives in the maia-sdr repo, branch fishball-p25)
 set "MAIA_SDR_DIR=C:\Users\Andy\Projects\MAIA_SDR\maia-sdr"
 set "MAIA_SDR_DOCKER=/mnt/maia-sdr"
 

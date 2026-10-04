@@ -5,6 +5,18 @@ Upstream: [F5OEO/tezuka_fw](https://github.com/F5OEO/tezuka_fw)
 
 ---
 
+## [2026-10-04] Change 006 — p25-httpd removed; the Maia packages follow maia-sdr's main
+
+**Branch:** fishball-dev
+**Related:** maia-sdr's cleanup (`doc/CLEANUP_INVENTORY.md`)
+
+The p25-httpd package goes (no defconfig selected it since the scanner replaced it); the
+scanner package stops copying `p25-httpd/p25-pac`; `maia-httpd` and `maia-wasm` fetch maia-sdr's
+`main` in place of the deleted `fishball-dev` (identical sources). Details:
+`doc/changes/006_p25_httpd_removed.md`.
+
+---
+
 ## [2026-04-11] Bitstream refresh — maia-sdr Phase 6G.1 + Phase 6 closeout
 
 **Branch:** fishball-dev

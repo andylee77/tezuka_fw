@@ -148,22 +148,10 @@ if [ -n "$LINUX_BUILD_DIR" ]; then
     done
 fi
 
-# Force-rebuild p25-httpd, the scanner or maia-httpd if the maia-sdr source is newer.
+# Force-rebuild the scanner or maia-httpd if the maia-sdr source is newer.
 # The maia-sdr repo is mounted read-only at /mnt/maia-sdr; Buildroot
 # rsyncs it into the build dir. Detect if source changed since last build.
 MAIA_SRC="/mnt/maia-sdr"
-if [ -d "$MAIA_SRC/p25-httpd" ]; then
-    P25_STAMP=$(find output/build/ -maxdepth 2 -name '.stamp_rsynced' -path '*/p25-httpd-*/*' 2>/dev/null | head -1 || true)
-    if [ -n "$P25_STAMP" ]; then
-        NEWER=$(find "$MAIA_SRC/p25-httpd" \( -name '*.rs' -o -name '*.toml' -o -name '*.svd' \) -newer "$P25_STAMP" 2>/dev/null | head -1 || true)
-        if [ -n "$NEWER" ]; then
-            log "  p25-httpd source changed ($(basename "$NEWER")) -- forcing rebuild..."
-            make p25-httpd-dirclean 2>/dev/null || true
-        else
-            log "  p25-httpd is up to date."
-        fi
-    fi
-fi
 if [ -d "$MAIA_SRC/scanner" ]; then
     SCANNER_STAMP=$(find output/build/ -maxdepth 2 -name '.stamp_rsynced' -path '*/scanner-*/*' 2>/dev/null | head -1 || true)
     if [ -n "$SCANNER_STAMP" ]; then

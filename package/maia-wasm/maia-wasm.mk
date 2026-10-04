@@ -5,7 +5,8 @@
 ################################################################################
 
 
-MAIA_WASM_VERSION = fishball-dev
+# The fork's maia-httpd and maia-wasm are upstream's: the branch that tracks upstream.
+MAIA_WASM_VERSION = main
 MAIA_WASM_SITE = https://github.com/andylee77/maia-sdr.git
 MAIA_WASM_SITE_METHOD = git
 MAIA_WASM_DEPENDENCIES = rust-wasm wasm-pack 

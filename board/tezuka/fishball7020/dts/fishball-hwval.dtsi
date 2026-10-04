@@ -78,7 +78,7 @@
 
 		/* Production-replica (legacy) ring: 16 x 1 MiB at 0x22000000,
 		   fixed base, same geometry as the P25 wideband IQ ring
-		   (p25_hdl.IQPacker -> maia_hdl.DmaStreamRingWrite). */
+		   (radio_core.IQPacker -> radio_core.DmaStreamRingWrite). */
 		hwval_legacy_mem: hwval-legacy@22000000 {
 			no-map;
 			reg = <0x22000000 0x1000000>;

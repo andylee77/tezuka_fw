@@ -58,7 +58,7 @@
 
 		/* The radio core's lane ring (maia-sdr doc/changes/079): every lane's IQ in 4 KB tagged
 		   packets, 128 sub-buffers of 16 KB = 2 MB (3.4 s at three lanes of 50 kSPS). Must
-		   match maia-hdl p25_hdl/config.py lanes_dma_*. */
+		   match scanner-hdl/radio_core/config.py lanes_dma_*. */
 		p25_lanes_dma: p25-lanes-dma@19000000 {
 			no-map;
 			reg = <0x19000000 0x200000>;

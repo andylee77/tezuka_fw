@@ -16,7 +16,7 @@ start() {
 		echo "Info : No nfs to mount"
 	fi
 
-	# The P25 build mounts the card earlier (S60p25-httpd needs it).
+	# The P25 build mounts the card earlier (S60scanner needs it).
 	if [ -e "$SD_FILE" ] && ! grep -q " /mnt/sd " /proc/mounts; then
    		echo "Mounting SD on /mnt/sd"
 		mount $SD_FILE /mnt/sd
